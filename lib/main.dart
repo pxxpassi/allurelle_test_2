@@ -7,22 +7,24 @@ import 'package:firebase_core/firebase_core.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Pink & White Theme App',
+      title: 'Allurelle App',
       theme: ThemeData(
         primarySwatch: Colors.pink,
       ),
       initialRoute: '/',
       routes: {
-        '/': (context) => LandingPage(),
-        '/login': (context) => LoginPage(),
-        '/signup': (context) => SignupPage(),
+        '/': (context) => const LandingPage(),
+        '/login': (context) => const LoginPage(), // Login Page
+        '/signup': (context) => const SignUpPage(),
       },
     );
   }

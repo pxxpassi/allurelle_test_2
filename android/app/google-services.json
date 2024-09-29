@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "917805413107",
-    "project_id": "allurelle-59c44",
-    "storage_bucket": "allurelle-59c44.appspot.com"
+    "project_number": "209405482210",
+    "project_id": "allurelle-68a9d",
+    "storage_bucket": "allurelle-68a9d.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:917805413107:android:a078ab27e8cc12e5c63d86",
+        "mobilesdk_app_id": "1:209405482210:android:776e9cc403b07f668afabb",
         "android_client_info": {
           "package_name": "com.example.allurelle_test_2"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDm5fUJn6ns3jA8ZQ36Nq9lGyg71uOj71U"
+          "current_key": "AIzaSyB6TU1vnbMf7Id8ZjvxKPg--WdIGv38qbc"
         }
       ],
       "services": {

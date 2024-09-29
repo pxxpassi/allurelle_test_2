@@ -1,40 +1,34 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'login_page.dart'; // Import the login page
 
-class LandingPage extends StatelessWidget {
+class LandingPage extends StatefulWidget {
+  const LandingPage({super.key});
+
+  @override
+  _LandingPageState createState() => _LandingPageState();
+}
+
+class _LandingPageState extends State<LandingPage> {
+  @override
+  void initState() {
+    super.initState();
+
+    // Navigate to the login page after 2 seconds
+    Future.delayed(const Duration(seconds: 2), () {
+      Navigator.pushReplacementNamed(context, '/login');
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.pink[50],
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Welcome',
-              style: TextStyle(fontSize: 40, color: Colors.pink),
-            ),
-            SizedBox(height: 30),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pink, // Button color
-                foregroundColor: Colors.white, // Text color
-              ),
-              onPressed: () {
-                Navigator.pushNamed(context, '/login');
-              },
-              child: Text('Login'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pink, // Button color
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.pushNamed(context, '/signup');
-              },
-              child: Text('Sign Up'),
-            ),
-          ],
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/image1.png'), // Splash screen image
+            fit: BoxFit.cover,
+          ),
         ),
       ),
     );

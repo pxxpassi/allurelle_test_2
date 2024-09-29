@@ -4,9 +4,10 @@ buildscript {
         mavenCentral() // Make sure you have this
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.0.2' // Check for the latest version
-        classpath 'com.google.gms:google-services:4.4.2' // Check for the latest version
+        classpath 'com.android.tools.build:gradle:8.1.2'
+        classpath 'com.google.gms:google-services:4.3.15' // Check for the latest version
     }
+
 }
 
 allprojects {
