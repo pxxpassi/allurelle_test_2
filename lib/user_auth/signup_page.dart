@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignUpPage extends StatefulWidget {
-  const SignUpPage({Key? key}) : super(key: key);
+  const SignUpPage({super.key});
 
   @override
   _SignUpPageState createState() => _SignUpPageState();
@@ -10,6 +11,7 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Define controllers here
   final TextEditingController nameController = TextEditingController();
@@ -32,27 +34,49 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _signup() async {
-
+    if (passwordController.text != reconfirmPasswordController.text) {
+      setState(() {
+        errorMessage = "Passwords do not match";
+      });
+      return;
+    }
 
     try {
-      // Firebase signup logic
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      // Create user with Firebase Authentication
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(
         email: emailController.text,
         password: passwordController.text,
       );
 
-      // Navigate to another page after successful signup
-      Navigator.pushNamed(context, '/login');
+      String uid = userCredential.user!.uid; // Get the unique Firebase uid
 
+      // Store user details in Firestore using the uid as the document ID
+      await _firestore.collection('users').doc(uid).set({
+        'name': nameController.text,
+        'username': usernameController.text,
+        'email': emailController.text,
+        'createdAt': FieldValue.serverTimestamp(), // Storing the timestamp when the user is created
+      });
+
+      print('User data stored in Firestore successfully');
+      _navigateToLogin(); // Navigate to home page after successful signup
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        errorMessage = e.message;
+      });
+      print('FirebaseAuthException: ${e.message}');
     } catch (e) {
       setState(() {
-        errorMessage = e.toString();
+        errorMessage = "An unexpected error occurred.";
       });
+      print('Error: $e');
     }
   }
-  void _navigateToLogin() {
-    // Navigate to the Sign Up page
-    Navigator.pushNamed(context, '/login');
+
+    void _navigateToLogin() {
+    // Navigate to the Login page
+    Navigator.pushReplacementNamed(context, '/login');
   }
 
   @override

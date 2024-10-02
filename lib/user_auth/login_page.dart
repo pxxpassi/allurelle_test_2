@@ -13,21 +13,42 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
+  String? errorMessage;
+
   Future<void> _login() async {
     try {
+      // Sign in the user with email and password
       await _auth.signInWithEmailAndPassword(
         email: emailController.text,
         password: passwordController.text,
       );
-      // Navigate to home page after successful login
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Login successful!'),
+          duration: Duration(seconds: 2), // Duration for the message
+        ),
+      );
+
+      // Delay the navigation to allow the SnackBar to show
+      Future.delayed(const Duration(seconds: 2), () {
+        _navigateToHomePage();
+      });
     } catch (e) {
-      print(e);
+      setState(() {
+        errorMessage = "An unexpected error occurred.";
+      });
+      print('Error: $e');
     }
   }
 
   void _navigateToSignUp() {
     // Navigate to the Sign Up page
     Navigator.pushNamed(context, '/signup');
+  }
+
+  void _navigateToHomePage() {
+    // Navigate to the Home page
+    Navigator.pushReplacementNamed(context, '/homepage');
   }
 
   @override
@@ -105,7 +126,7 @@ class _LoginPageState extends State<LoginPage> {
                       TextField(
                         controller: emailController,
                         decoration: const InputDecoration(
-                          labelText: 'Username',
+                          labelText: 'Email',
                           labelStyle: TextStyle(color: Colors.pink),
                           border: OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink),
@@ -150,6 +171,12 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: _login,
                         child: const Text('Login'),
                       ),
+                      const SizedBox(height: 20),
+                      if (errorMessage != null)
+                        Text(
+                          errorMessage!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
                       const SizedBox(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
