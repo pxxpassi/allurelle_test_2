@@ -35,7 +35,7 @@ class _LoginPageState extends State<LoginPage> {
       });
     } catch (e) {
       setState(() {
-        errorMessage = "An unexpected error occurred.";
+        errorMessage = "Incorrect Email or Password.";
       });
       print('Error: $e');
     }

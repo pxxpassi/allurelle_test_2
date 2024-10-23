@@ -15,7 +15,7 @@ class _LandingPageState extends State<LandingPage> {
     super.initState();
 
     // Navigate to the login page after 2 seconds
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 5), () {
       Navigator.pushReplacementNamed(context, '/login');
     });
   }

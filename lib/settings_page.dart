@@ -16,6 +16,10 @@ class SettingsPage extends StatelessWidget {
     }
   }
 
+  void _settings(BuildContext context) {
+    Navigator.pushNamed(context, '/settings');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -32,6 +36,22 @@ class SettingsPage extends StatelessWidget {
           ),
         ),
         centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            color: Colors.pink, // Icon color for notifications
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Notifications Clicked')),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            color: Colors.pink, // Icon color for settings
+            onPressed: () => _settings(context),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -64,42 +84,63 @@ class SettingsPage extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
+            icon: Icon(Icons.history),
+            label: 'History',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'Notifications',
+            icon: Icon(Icons.camera_alt_outlined),
+            label: 'Capture',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_rounded),
+            label: 'SkinQuiz',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
-        currentIndex: 1, // Set the index to 1 for SettingsPage
+        currentIndex: 4, // Set the initial selected index
         selectedItemColor: Colors.pink,
         unselectedItemColor: Colors.grey,
         onTap: (index) {
           // Handle tap events based on the selected index
           switch (index) {
             case 0:
-            // Navigate to Home
               Navigator.pushNamed(context, '/homepage');
               break;
             case 1:
-            // Stay on Settings
-              break; // Do nothing, already on settings
-            case 2:
-            // Handle Notifications tap
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notifications Clicked')),
+                const SnackBar(content: Text('History Clicked')),
+              );
+
+              break;
+            case 2:
+              // Handle Notifications tap
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Capture Clicked')),
               );
               break;
+            case 3:
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('SkinQuiz Clicked')),
+              );
+              break;
+            case 4:
+            // Navigate to Settings
+              break;
+
           }
         },
       ),
     );
   }
 }
+

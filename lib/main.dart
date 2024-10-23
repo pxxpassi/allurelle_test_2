@@ -1,5 +1,8 @@
+import 'package:allurelle_test_2/camera_page.dart';
 import 'package:allurelle_test_2/home_page.dart';
+import 'package:allurelle_test_2/profile_page.dart';
 import 'package:allurelle_test_2/settings_page.dart';
+import 'package:allurelle_test_2/skinquiz_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'landing_page.dart';
@@ -23,15 +26,16 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.pink,
       ),
-      home: AuthCheck(), // Start the app with the AuthCheck widget
+      home: const AuthCheck(), // Start the app with the AuthCheck widget
       routes: {
         '/home': (context) => const LandingPage(),
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignUpPage(),
         '/homepage': (context) => const HomePage(),
         '/settings': (context) => const SettingsPage(),
-
-
+        '/profile': (context) => const ProfilePage(),
+        '/camera': (context) => const CameraPage(),
+        '/skinquiz': (context) => const SkinquizPage(),
     },
     );
   }

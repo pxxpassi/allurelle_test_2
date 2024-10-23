@@ -60,7 +60,17 @@ class _SignUpPageState extends State<SignUpPage> {
       });
 
       print('User data stored in Firestore successfully');
-      _navigateToLogin(); // Navigate to home page after successful signup
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('SignUp successful!'),
+          duration: Duration(seconds: 2), // Duration for the message
+        ),
+      );
+
+      // Delay the navigation to allow the SnackBar to show
+      Future.delayed(const Duration(seconds: 2), () {
+        _navigateToLogin();
+      }); // Navigate to home page after successful signup
     } on FirebaseAuthException catch (e) {
       setState(() {
         errorMessage = e.message;
