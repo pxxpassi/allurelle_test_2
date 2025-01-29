@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   _HomePageState createState() => _HomePageState();
@@ -114,12 +114,9 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 30),
 
-              // Buttons for SkinQuiz and Capture Face
-              // Buttons for SkinQuiz and Capture Face
-              // Buttons for SkinQuiz and Capture Face
               Column(
                 children: [
-                  Container(
+                  SizedBox(
                     width: double.infinity, // Makes the button take full width
                     child: ElevatedButton.icon(
                       onPressed: () {
@@ -142,7 +139,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Container(
+                  SizedBox(
                     width: double.infinity, // Makes the button take full width
                     child: ElevatedButton.icon(
                       onPressed: () {
@@ -229,6 +226,7 @@ class _HomePageState extends State<HomePage> {
 
       // Bottom Navigation Bar
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
@@ -237,6 +235,10 @@ class _HomePageState extends State<HomePage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.history),
             label: 'History',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.camera_alt),
+            label: 'Camera', // Added button for capturing face
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.chat),
@@ -251,10 +253,9 @@ class _HomePageState extends State<HomePage> {
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
         onTap: (index) {
-          // Handle tap events based on the selected index
           switch (index) {
             case 0:
-              Navigator.pushReplacementNamed(context, '/homepage');
+              Navigator.pushNamed(context, '/homepage');
               break;
             case 1:
               ScaffoldMessenger.of(context).showSnackBar(
@@ -262,9 +263,12 @@ class _HomePageState extends State<HomePage> {
               );
               break;
             case 2:
-              Navigator.pushReplacementNamed(context, '/skinquiz');
+              Navigator.pushReplacementNamed(context, '/camera');
               break;
             case 3:
+              Navigator.pushNamed(context, '/skinquiz');
+              break;
+            case 4:
               Navigator.pushReplacementNamed(context, '/profile');
               break;
           }

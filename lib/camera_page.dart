@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'image_preview_page.dart'; // Import the new image preview page
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -14,6 +15,8 @@ class _CameraPageState extends State<CameraPage> {
   bool _isCameraInitialized = false;
   bool _isCameraPermissionGranted = false;
   String _errorMessage = '';
+  List<CameraDescription>? _cameras;
+  int _selectedCameraIndex = 0;
 
   @override
   void initState() {
@@ -43,8 +46,8 @@ class _CameraPageState extends State<CameraPage> {
 
   Future<void> _initializeCamera() async {
     try {
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) {
+      _cameras = await availableCameras();
+      if (_cameras!.isEmpty) {
         setState(() {
           _errorMessage = 'No cameras found on device';
         });
@@ -52,7 +55,7 @@ class _CameraPageState extends State<CameraPage> {
       }
 
       _controller = CameraController(
-        cameras[0],
+        _cameras![_selectedCameraIndex],
         ResolutionPreset.high,
         enableAudio: false,
       );
@@ -71,6 +74,22 @@ class _CameraPageState extends State<CameraPage> {
       });
       debugPrint('Camera initialization error: $e');
     }
+  }
+
+  void _toggleCamera() async {
+    if (_cameras == null || _cameras!.length < 2) {
+      setState(() {
+        _errorMessage = 'No multiple cameras found';
+      });
+      return;
+    }
+
+    setState(() {
+      _selectedCameraIndex = (_selectedCameraIndex + 1) % _cameras!.length; // Toggle between cameras
+      _isCameraInitialized = false; // Reset camera state
+    });
+
+    await _initializeCamera();
   }
 
   @override
@@ -190,13 +209,20 @@ class _CameraPageState extends State<CameraPage> {
                     backgroundColor: Colors.white,
                     child: const Icon(Icons.arrow_back, color: Colors.pinkAccent),
                   ),
+
                   FloatingActionButton(
                     heroTag: 'captureButton',
                     onPressed: () async {
                       try {
                         final image = await _controller!.takePicture();
                         if (!mounted) return;
-                        Navigator.pop(context, image.path);
+                        // Navigate to preview page with the captured image
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ImagePreviewPage(imagePath: image.path), // Replace 'path' with the actual image path
+                          ),
+                        );
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Error taking picture: $e')),
@@ -205,6 +231,12 @@ class _CameraPageState extends State<CameraPage> {
                     },
                     backgroundColor: Colors.pinkAccent,
                     child: const Icon(Icons.camera_alt, color: Colors.white),
+                  ),
+                  FloatingActionButton(
+                    heroTag: 'toggleButton',
+                    onPressed: _toggleCamera, // Toggle between front and back cameras
+                    backgroundColor: Colors.pinkAccent,
+                    child: const Icon(Icons.switch_camera, color: Colors.white),
                   ),
                 ],
               ),
