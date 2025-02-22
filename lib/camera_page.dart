@@ -1,6 +1,8 @@
+// import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:image_picker/image_picker.dart';
 import 'image_preview_page.dart'; // Import the new image preview page
 
 class CameraPage extends StatefulWidget {
@@ -90,6 +92,21 @@ class _CameraPageState extends State<CameraPage> {
     });
 
     await _initializeCamera();
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ImagePreviewPage(imagePath: pickedFile.path),
+        ),
+      );
+    }
   }
 
   @override
@@ -205,7 +222,7 @@ class _CameraPageState extends State<CameraPage> {
                 children: [
                   FloatingActionButton(
                     heroTag: 'backButton',
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.pushReplacementNamed(context, '/homepage'),
                     backgroundColor: Colors.white,
                     child: const Icon(Icons.arrow_back, color: Colors.pinkAccent),
                   ),
@@ -216,11 +233,10 @@ class _CameraPageState extends State<CameraPage> {
                       try {
                         final image = await _controller!.takePicture();
                         if (!mounted) return;
-                        // Navigate to preview page with the captured image
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ImagePreviewPage(imagePath: image.path), // Replace 'path' with the actual image path
+                            builder: (context) => ImagePreviewPage(imagePath: image.path),
                           ),
                         );
                       } catch (e) {
@@ -232,11 +248,19 @@ class _CameraPageState extends State<CameraPage> {
                     backgroundColor: Colors.pinkAccent,
                     child: const Icon(Icons.camera_alt, color: Colors.white),
                   ),
+
                   FloatingActionButton(
                     heroTag: 'toggleButton',
-                    onPressed: _toggleCamera, // Toggle between front and back cameras
+                    onPressed: _toggleCamera,
                     backgroundColor: Colors.pinkAccent,
                     child: const Icon(Icons.switch_camera, color: Colors.white),
+                  ),
+
+                  FloatingActionButton(
+                    heroTag: 'galleryButton',
+                    onPressed: _pickImageFromGallery,
+                    backgroundColor: Colors.pinkAccent,
+                    child: const Icon(Icons.photo_library, color: Colors.white),
                   ),
                 ],
               ),

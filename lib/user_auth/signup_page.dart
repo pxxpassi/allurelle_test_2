@@ -21,6 +21,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController reconfirmPasswordController = TextEditingController();
 
   String? errorMessage;
+  bool _isObscure = true;
 
   @override
   void dispose() {
@@ -74,10 +75,16 @@ class _SignUpPageState extends State<SignUpPage> {
         _navigateToLogin();
       }); // Navigate to home page after successful signup
     } on FirebaseAuthException catch (e) {
-      setState(() {
-        errorMessage = e.message;
-      });
-      print('FirebaseAuthException: ${e.message}');
+      if (e.code == 'email-already-in-use') {
+        setState(() {
+          errorMessage = "The email address is already in use.";
+        });
+      } else {
+        setState(() {
+          errorMessage = e.message;
+        });
+        print('FirebaseAuthException: ${e.message}');
+      }
     } catch (e) {
       setState(() {
         errorMessage = "An unexpected error occurred.";
@@ -207,41 +214,63 @@ class _SignUpPageState extends State<SignUpPage> {
                       const SizedBox(height: 20),
                       TextField(
                         controller: passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
+                        obscureText: _isObscure,
+                        decoration: InputDecoration(
                           labelText: 'Set Password',
-                          labelStyle: TextStyle(color: Colors.pink),
-                          border: OutlineInputBorder(
+                          labelStyle: const TextStyle(color: Colors.pink),
+                          border: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink),
                           ),
-                          enabledBorder: OutlineInputBorder(
+                          enabledBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink),
                           ),
-                          focusedBorder: OutlineInputBorder(
+                          focusedBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink, width: 2.0),
                           ),
                           filled: true,
                           fillColor: Colors.white,
+                          suffixIcon: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isObscure = !_isObscure;
+                              });
+                            },
+                            child: Icon(
+                              _isObscure ? Icons.visibility_off : Icons.visibility,
+                              color: Colors.grey,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),
                       TextField(
                         controller: reconfirmPasswordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
+                        obscureText: _isObscure,
+                        decoration: InputDecoration(
                           labelText: 'Reconfirm Password',
-                          labelStyle: TextStyle(color: Colors.pink),
-                          border: OutlineInputBorder(
+                          labelStyle: const TextStyle(color: Colors.pink),
+                          border: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink),
                           ),
-                          enabledBorder: OutlineInputBorder(
+                          enabledBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink),
                           ),
-                          focusedBorder: OutlineInputBorder(
+                          focusedBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink, width: 2.0),
                           ),
                           filled: true,
                           fillColor: Colors.white,
+                          suffixIcon: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isObscure = !_isObscure;
+                              });
+                            },
+                            child: Icon(
+                              _isObscure ? Icons.visibility_off : Icons.visibility,
+                              color: Colors.grey,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -258,8 +287,8 @@ class _SignUpPageState extends State<SignUpPage> {
                       if (errorMessage != null)
                         Text(
                           errorMessage!,
-                          style: const TextStyle(color: Colors.red),
-                        ), // Display error messages
+                          style: TextStyle(color: Colors.red),
+                        ),
                       const SizedBox(height: 10),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,

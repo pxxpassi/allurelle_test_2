@@ -267,7 +267,7 @@ class _SkinquizPageState extends State<SkinquizPage> {
         onTap: (index) {
           switch (index) {
             case 0:
-              Navigator.pushNamed(context, '/homepage');
+              Navigator.pushReplacementNamed(context, '/homepage');
               break;
             case 1:
               ScaffoldMessenger.of(context).showSnackBar(
@@ -278,7 +278,7 @@ class _SkinquizPageState extends State<SkinquizPage> {
               Navigator.pushReplacementNamed(context, '/camera');
               break;
             case 3:
-              Navigator.pushNamed(context, '/skinquiz');
+              Navigator.pushReplacementNamed(context, '/skinquiz');
               break;
             case 4:
               Navigator.pushReplacementNamed(context, '/profile');
@@ -369,8 +369,8 @@ class SubmitQuizWidget extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Confirm Submission'),
-          content: Text('Are you sure you want to submit the quiz?'),
+          title: const Text('Confirm Submission'),
+          content: const Text('Are you sure you want to submit the quiz?'),
           actions: <Widget>[
             TextButton(
               onPressed: () {

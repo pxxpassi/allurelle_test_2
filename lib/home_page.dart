@@ -84,7 +84,8 @@ class _HomePageState extends State<HomePage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  RichText(
+                  Flexible(
+                    child : RichText(
                     text: TextSpan(
                       children: [
                         const TextSpan(
@@ -105,7 +106,10 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
+                  )
+
                 ],
               ),
               const Text(
@@ -255,7 +259,7 @@ class _HomePageState extends State<HomePage> {
         onTap: (index) {
           switch (index) {
             case 0:
-              Navigator.pushNamed(context, '/homepage');
+              Navigator.pushReplacementNamed(context, '/homepage');
               break;
             case 1:
               ScaffoldMessenger.of(context).showSnackBar(
@@ -266,7 +270,7 @@ class _HomePageState extends State<HomePage> {
               Navigator.pushReplacementNamed(context, '/camera');
               break;
             case 3:
-              Navigator.pushNamed(context, '/skinquiz');
+              Navigator.pushReplacementNamed(context, '/skinquiz');
               break;
             case 4:
               Navigator.pushReplacementNamed(context, '/profile');

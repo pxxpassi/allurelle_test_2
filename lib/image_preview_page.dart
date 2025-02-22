@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path/path.dart';
 
 class ImagePreviewPage extends StatefulWidget {
@@ -24,33 +25,45 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     });
 
     try {
+      // Check if user is authenticated
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() {
+          _isUploading = false;
+          _uploadStatus = 'User not authenticated';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not authenticated')),
+        );
+        return;
+      }
+
       File imageFile = File(widget.imagePath);
       String fileName = basename(imageFile.path);
 
       // Upload to Firebase Storage
       FirebaseStorage storage = FirebaseStorage.instance;
-      Reference ref = storage.ref().child('images/$fileName');
+      Reference ref = storage.ref().child('images/${user.uid}/$fileName');
       await ref.putFile(imageFile);
 
       // Get the download URL
       String downloadURL = await ref.getDownloadURL();
 
-      // Save to Firestore (replace 'userId' with the actual user ID)
-      await FirebaseFirestore.instance.collection('users').doc('userId').collection('photos').add({
+      // Save to Firestore
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('photos').add({
         'url': downloadURL,
         'timestamp': FieldValue.serverTimestamp(),
       });
 
       setState(() {
+        _isUploading = false;
         _uploadStatus = 'Image successfully uploaded';
       });
 
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Image successfully uploaded')),
       );
 
-      // Navigate back to the previous screen
       Navigator.pop(context);
     } catch (e) {
       setState(() {
@@ -58,7 +71,6 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
         _uploadStatus = 'Failed to upload image: $e';
       });
 
-      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to upload image: $e')),
       );
@@ -101,39 +113,43 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
               ),
             ),
           if (!_isUploading)
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            Column(
               children: [
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context), // Retake the photo
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.pinkAccent,
-                    backgroundColor: Colors.pink[50],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20.0),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.pinkAccent,
+                        backgroundColor: Colors.pink[50],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20.0),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14.6, horizontal: 20),
+                        minimumSize: const Size(70, 40),
+                      ),
+                      child: const Text('Retake', style: TextStyle(fontSize: 14)),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 14.6, horizontal: 20),
-                    minimumSize: const Size(70, 40),
-                  ),
-                  child: const Text('Retake', style: TextStyle(fontSize: 14),),
-                ),
-                ElevatedButton(
-                  onPressed: () => _uploadImageToFirestore(context), // Proceed and upload the photo
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.pinkAccent,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20.0),
+                    ElevatedButton(
+                      onPressed: () => _uploadImageToFirestore(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.pinkAccent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20.0),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14.6, horizontal: 20),
+                        minimumSize: const Size(70, 40),
+                      ),
+                      child: const Text('Proceed'),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 14.6, horizontal: 20),
-                    minimumSize: const Size(70, 40),
-                  ),
-                  child: const Text('Proceed'),
+                  ],
                 ),
+                const SizedBox(height: 20),
               ],
             ),
-          const SizedBox(height: 20),
         ],
       ),
     );

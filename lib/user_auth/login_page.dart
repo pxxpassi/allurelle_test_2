@@ -14,6 +14,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController passwordController = TextEditingController();
 
   String? errorMessage;
+  bool _isObscure = true;
 
   Future<void> _login() async {
     try {
@@ -144,21 +145,32 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 20),
                       TextField(
                         controller: passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
+                        obscureText: _isObscure,
+                        decoration: InputDecoration(
                           labelText: 'Password',
-                          labelStyle: TextStyle(color: Colors.pink),
-                          border: OutlineInputBorder(
+                          labelStyle: const TextStyle(color: Colors.pink),
+                          border: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink),
                           ),
-                          enabledBorder: OutlineInputBorder(
+                          enabledBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink),
                           ),
-                          focusedBorder: OutlineInputBorder(
+                          focusedBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink, width: 2.0),
                           ),
                           filled: true,
                           fillColor: Colors.white,
+                          suffixIcon: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isObscure = !_isObscure;
+                              });
+                            },
+                            child: Icon(
+                              _isObscure ? Icons.visibility_off : Icons.visibility,
+                              color: Colors.grey,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),

@@ -2,7 +2,7 @@
   "project_info": {
     "project_number": "209405482210",
     "project_id": "allurelle-68a9d",
-    "storage_bucket": "allurelle-68a9d.appspot.com"
+    "storage_bucket": "gs://allurelle-68a9d.appspot.com"
   },
   "client": [
     {
