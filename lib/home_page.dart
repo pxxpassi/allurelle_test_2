@@ -21,44 +21,31 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _fetchUserName() async {
     try {
-      // Get the current user ID
       User? currentUser = _auth.currentUser;
       if (currentUser != null) {
-        print('Fetching data for user: ${currentUser.uid}');
-
-        // Fetch the user document from Firestore using the user's ID
         DocumentSnapshot userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(currentUser.uid)
             .get();
 
-        // Check if the document exists and has a 'name' field
         if (userDoc.exists) {
-          print('Document exists');
           Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
           if (data.containsKey('name')) {
             setState(() {
-              userName = data['name'] ?? 'User'; // Set the name from Firestore
+              userName = data['name'] ?? 'User';
             });
-            print('User name: $userName');
-          } else {
-            print('Name field does not exist in document');
           }
-        } else {
-          print('Document does not exist');
         }
-      } else {
-        print('No current user found');
       }
     } catch (e) {
       print('Error fetching user data: $e');
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         automaticallyImplyLeading: false,
@@ -96,7 +83,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         TextSpan(
-                          text: userName, // Display the fetched user name here
+                          text: userName,
                           style: const TextStyle(
                             fontSize: 36,
                             fontWeight: FontWeight.bold,
@@ -115,60 +102,41 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 30),
 
               // Buttons for SkinQuiz and Capture Face
-              // Buttons for SkinQuiz and Capture Face
-              // Buttons for SkinQuiz and Capture Face
               Column(
                 children: [
-                  Container(
-                    width: double.infinity, // Makes the button take full width
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/camera');
-                      },
-                      icon: const Icon(Icons.camera_alt_outlined),
-                      label: const Text(
-                        "Capture Face",
-                        style: TextStyle(fontSize: 18), // Set the font size here
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/camera');
+                    },
+                    icon: const Icon(Icons.camera_alt_outlined),
+                    label: const Text("Capture Face", style: TextStyle(fontSize: 18)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.pink[50],
+                      foregroundColor: Colors.pinkAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20.0),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.pink[50],
-                        foregroundColor: Colors.pinkAccent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20.0),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14.6, horizontal: 20),
-                        minimumSize: const Size(150, 50), // Adjust the size as needed
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14.6, horizontal: 20),
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Container(
-                    width: double.infinity, // Makes the button take full width
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pushReplacementNamed(context, '/skinquiz');
-                      },
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      label: const Text(
-                        "Take SkinQuiz",
-                        style: TextStyle(fontSize: 18), // Set the font size here
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pushReplacementNamed(context, '/skinquiz');
+                    },
+                    icon: const Icon(Icons.chat_bubble_outline),
+                    label: const Text("Take SkinQuiz", style: TextStyle(fontSize: 18)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.pink[50],
+                      foregroundColor: Colors.pinkAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20.0),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.pink[50],
-                        foregroundColor: Colors.pinkAccent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20.0),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14.6, horizontal: 20),
-                        minimumSize: const Size(150, 50), // Adjust the size as needed
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14.6, horizontal: 20),
                     ),
                   ),
-                  // Space between buttons
-
                 ],
               ),
-
 
               const SizedBox(height: 30),
 
@@ -190,8 +158,6 @@ class _HomePageState extends State<HomePage> {
                     productCard("Product 1", "assets/1.png"),
                     productCard("Product 2", "assets/2.png"),
                     productCard("Product 3", "assets/3.png"),
-                    productCard("Product 4", "assets/4.png"),
-                    productCard("Product 5", "assets/5.png"),
                   ],
                 ),
               ),
@@ -225,10 +191,10 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
 
-
-
-      // Bottom Navigation Bar
+      // Bottom Navigation Bar with Floating Button
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.pink[10],
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
@@ -237,6 +203,10 @@ class _HomePageState extends State<HomePage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.history),
             label: 'History',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(null),
+            label: '',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.chat),
@@ -251,10 +221,8 @@ class _HomePageState extends State<HomePage> {
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
         onTap: (index) {
-          // Handle tap events based on the selected index
           switch (index) {
             case 0:
-              Navigator.pushReplacementNamed(context, '/homepage');
               break;
             case 1:
               ScaffoldMessenger.of(context).showSnackBar(
@@ -262,14 +230,25 @@ class _HomePageState extends State<HomePage> {
               );
               break;
             case 2:
-              Navigator.pushReplacementNamed(context, '/skinquiz');
               break;
             case 3:
+              Navigator.pushReplacementNamed(context, '/skinquiz');
+              break;
+            case 4:
               Navigator.pushReplacementNamed(context, '/profile');
               break;
           }
         },
       ),
+
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.pinkAccent,
+        onPressed: () {
+          Navigator.pushNamed(context, '/camera');
+        },
+        child: const Icon(Icons.camera_alt, color: Colors.white),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
@@ -280,13 +259,6 @@ class _HomePageState extends State<HomePage> {
       margin: const EdgeInsets.only(right: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 5,
-            spreadRadius: 2,
-          ),
-        ],
         color: Colors.white,
       ),
       child: Column(
@@ -294,7 +266,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: Image.asset(imagePath, height: 100, width: 120 , fit: BoxFit.cover),
+            child: Image.asset(imagePath, height: 100, width: 120, fit: BoxFit.cover),
           ),
           const SizedBox(height: 8),
           Text(

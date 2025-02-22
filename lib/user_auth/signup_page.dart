@@ -56,6 +56,9 @@ class _SignUpPageState extends State<SignUpPage> {
         'name': nameController.text,
         'username': usernameController.text,
         'email': emailController.text,
+        'age': "None",
+        'gender' : "None",
+        'profile_image' : "",
         'createdAt': FieldValue.serverTimestamp(), // Storing the timestamp when the user is created
       });
 
