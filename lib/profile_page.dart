@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -18,6 +19,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final ImagePicker _picker = ImagePicker();
   Map<String, dynamic>? userData;
   String profileImageUrl = "assets/default_avatar.webp";
+  bool _isKeyboardVisible = false;
 
   Future<void> _getUserData() async {
     if (user != null) {
@@ -132,41 +134,45 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              Center(
-                child: GestureDetector(
-                  onTap: _pickImage,
-                  child: CircleAvatar(
-                    radius: 60,
-                    backgroundImage: _image != null
-                        ? FileImage(_image!)
-                        : (profileImageUrl.startsWith('http')
-                        ? NetworkImage(profileImageUrl) as ImageProvider
-                        : AssetImage(profileImageUrl)),
-                    child: const Icon(Icons.camera_alt, size: 30, color: Colors.white70),
+      body: KeyboardVisibilityBuilder(
+        builder: (context, isKeyboardVisible) {
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+                  Center(
+                    child: GestureDetector(
+                      onTap: _pickImage,
+                      child: CircleAvatar(
+                        radius: 60,
+                        backgroundImage: _image != null
+                            ? FileImage(_image!)
+                            : (profileImageUrl.startsWith('http')
+                            ? NetworkImage(profileImageUrl) as ImageProvider
+                            : AssetImage(profileImageUrl)),
+                        child: const Icon(Icons.camera_alt, size: 30, color: Colors.white70),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 40),
+                  _buildEditableField("Name", "name", Icons.person),
+                  _buildEditableField("Username", "username", Icons.alternate_email),
+                  ListTile(
+                    title: const Text("Email"),
+                    subtitle: Text(user?.email ?? 'No email found'),
+                    leading: const Icon(Icons.email),
+                  ),
+                  _buildEditableField("Gender", "gender", Icons.wc),
+                  _buildEditableField("Age", "age", Icons.cake),
+                  const SizedBox(height: 100),
+                ],
               ),
-              const SizedBox(height: 40),
-              _buildEditableField("Name", "name", Icons.person),
-              _buildEditableField("Username", "username", Icons.alternate_email),
-              ListTile(
-                title: const Text("Email"),
-                subtitle: Text(user?.email ?? 'No email found'),
-                leading: const Icon(Icons.email),
-              ),
-              _buildEditableField("Gender", "gender", Icons.wc),
-              _buildEditableField("Age", "age", Icons.cake),
-              const SizedBox(height: 100),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
@@ -176,7 +182,9 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(Icons.home, "Home", Colors.grey, () {Navigator.pushReplacementNamed(context, '/homepage');}),
+              _buildNavItem(Icons.home, "Home", Colors.grey, () {
+                Navigator.pushReplacementNamed(context, '/homepage');
+              }),
               _buildNavItem(Icons.analytics_rounded, "For You", Colors.grey, () {
                 Navigator.pushReplacementNamed(context, '/foryou');
               }),
@@ -184,33 +192,27 @@ class _ProfilePageState extends State<ProfilePage> {
               _buildNavItem(Icons.chat, "SkinQuiz", Colors.grey, () {
                 Navigator.pushReplacementNamed(context, '/skinquiz');
               }),
-              _buildNavItem(Icons.person, "Profile", Colors.pinkAccent, () {
-
-              }),
+              Visibility(
+                visible: !_isKeyboardVisible,
+                child: _buildNavItem(Icons.person, "Profile", Colors.pinkAccent, () {}),
+              ),
             ],
           ),
         ),
       ),
 
-      floatingActionButton: SizedBox(
-        height: 65, // Adjusts the FAB size
-        width: 65,
+      floatingActionButton: Visibility(
+        visible: MediaQuery.of(context).viewInsets.bottom == 0, // Hide FAB when keyboard opens
         child: FloatingActionButton(
           backgroundColor: Colors.pinkAccent,
           onPressed: () {
             Navigator.pushNamed(context, '/camera');
           },
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(50),
-          ),
-          child: const Icon(
-            Icons.camera_alt,
-            color: Colors.white,
-            size: 34, // Enlarges the icon
-          ),
+          shape: const CircleBorder(),
+          child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.miniCenterDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 

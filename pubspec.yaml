@@ -43,6 +43,7 @@ dependencies:
   image: ^4.5.3
   provider: ^6.1.2
   url_launcher: ^6.3.1
+  flutter_keyboard_visibility: ^6.0.0
 
 
 dev_dependencies:

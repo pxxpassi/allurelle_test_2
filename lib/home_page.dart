@@ -24,7 +24,6 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _fetchUserName(); // Fetch the user's name when the widget is initialized
     _getUserData();
-    _requestLocationPermission();
   }
 
   Future<void> _fetchUserName() async {
@@ -115,7 +114,7 @@ class _HomePageState extends State<HomePage> {
       // Ensure location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        throw 'Location services are disabled.';
+        _requestLocationPermission();
       }
 
       // Request permission
