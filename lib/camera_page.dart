@@ -1,11 +1,11 @@
-import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'image_preview_page.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image/image.dart' as img;
+
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -22,11 +22,19 @@ class _CameraPageState extends State<CameraPage> {
   List<CameraDescription> _cameras = [];
   String _errorMessage = '';
 
+  String userName = ''; // Default user name
+  // final FirebaseAuth _auth = FirebaseAuth.instance;
+  final User? user = FirebaseAuth.instance.currentUser;
+  Map<String, dynamic>? userData;
+  String profileImageUrl = "assets/default_avatar.webp";
+
   @override
   void initState() {
     super.initState();
     _requestCameraPermission();
+    _getUserData();
   }
+
 
   Future<void> _requestCameraPermission() async {
     final status = await Permission.camera.request();
@@ -39,6 +47,18 @@ class _CameraPageState extends State<CameraPage> {
       setState(() {
         _errorMessage = 'Camera permission was denied';
         _isCameraPermissionGranted = false;
+      });
+    }
+  }
+
+  Future<void> _getUserData() async {
+    if (user != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+      setState(() {
+        userData = userDoc.data() as Map<String, dynamic>?;
+        profileImageUrl = (userData?['profile_image'] != null && userData?['profile_image'].isNotEmpty)
+            ? userData!['profile_image']
+            : "assets/default_avatar.webp";
       });
     }
   }
@@ -102,14 +122,6 @@ class _CameraPageState extends State<CameraPage> {
     }
   }
 
-
-  Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedFile != null && mounted) {
-      _navigateToPreview(pickedFile.path);
-    }
-  }
-
   Future<void> _captureImage() async {
     if (_controller == null || !_controller!.value.isInitialized) return;
 
@@ -119,6 +131,13 @@ class _CameraPageState extends State<CameraPage> {
       _navigateToPreview(image.path);
     } catch (e) {
       _showSnackBar('Error taking picture: $e');
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null && mounted) {
+      _navigateToPreview(pickedFile.path);
     }
   }
 
@@ -137,6 +156,8 @@ class _CameraPageState extends State<CameraPage> {
     );
   }
 
+
+
   @override
   void dispose() {
     _controller?.dispose();
@@ -150,21 +171,77 @@ class _CameraPageState extends State<CameraPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+      appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          automaticallyImplyLeading: false,
+          elevation: 0,
+          title: Padding(
+            padding: const EdgeInsets.only(left: 15.0),
+            child: Image.asset(
+              'assets/allurelle_logo.png',
+              height: 50,
+              width: 50,
+            ),
+          ),
+          centerTitle: false,
+          actions:[
+            IconButton(
+              icon: const Icon(Icons.notification_add_rounded, color: Colors.pinkAccent, size: 30),
+              onPressed: () {
+                Navigator.pushReplacementNamed(context, '/settings');
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 30.0, left: 10),
+              child: CircleAvatar(
+                backgroundImage: profileImageUrl.startsWith("http")
+                    ? NetworkImage(profileImageUrl)
+                    : AssetImage(profileImageUrl) as ImageProvider,
+              ),
+            ),]
+      ),
       body: _isCameraInitialized
           ? Stack(
-        children: [
-          CameraPreview(_controller!),
-          _buildCameraControls(),
-        ],
-      )
+            children: [
+              CameraPreview(_controller!),
+              _buildCameraControls(),
+            ],
+          )
           : const Center(child: CircularProgressIndicator()),
     );
   }
 
   Widget _buildPermissionScreen() {
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+      appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          automaticallyImplyLeading: false,
+          elevation: 0,
+          title: Padding(
+            padding: const EdgeInsets.only(left: 15.0),
+            child: Image.asset(
+              'assets/allurelle_logo.png',
+              height: 50,
+              width: 50,
+            ),
+          ),
+          centerTitle: false,
+          actions:[
+            IconButton(
+              icon: const Icon(Icons.notification_add_rounded, color: Colors.pinkAccent, size: 30),
+              onPressed: () {
+                Navigator.pushReplacementNamed(context, '/settings');
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 30.0, left: 10),
+              child: CircleAvatar(
+                backgroundImage: profileImageUrl.startsWith("http")
+                    ? NetworkImage(profileImageUrl)
+                    : AssetImage(profileImageUrl) as ImageProvider,
+              ),
+            ),]
+      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -211,112 +288,6 @@ class _CameraPageState extends State<CameraPage> {
             backgroundColor: Colors.white,
             heroTag: 'imagePickerButton',
             child: const Icon(Icons.image, color: Colors.pinkAccent),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------- Image Preview Page ----------------------
-
-class ImagePreviewPage extends StatefulWidget {
-  final String imagePath;
-  const ImagePreviewPage({super.key, required this.imagePath});
-
-  @override
-  _ImagePreviewPageState createState() => _ImagePreviewPageState();
-}
-
-class _ImagePreviewPageState extends State<ImagePreviewPage> {
-  bool _isUploading = false;
-
-  Future<File> _compressImage(File file) async {
-    final rawImage = img.decodeImage(await file.readAsBytes());
-    if (rawImage == null) return file;
-
-    final resizedImage = img.copyResize(rawImage, width: 800); // Resize to 800px width
-    final compressedImage = img.encodeJpg(resizedImage, quality: 50); // Reduce quality to 50%
-
-    final newFile = File(file.path)..writeAsBytesSync(compressedImage);
-    return newFile;
-  }
-
-
-  Future<void> _uploadImage(BuildContext context) async {
-    if (_isUploading) return;
-    setState(() => _isUploading = true);
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        _showSnackBar(context, "User not authenticated");
-        return;
-      }
-
-      final file = File(widget.imagePath);
-      if (!await file.exists()) {
-        _showSnackBar(context, "File not found");
-        return;
-      }
-
-      final fileName = "${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg";
-      final storageRef = FirebaseStorage.instance.ref().child('images/$fileName');
-
-      final compressedFile = await _compressImage(file);
-      final fileBytes = await compressedFile.readAsBytes();
-
-      UploadTask uploadTask = storageRef.putData(fileBytes);
-
-      await uploadTask.whenComplete(() async {
-        final downloadUrl = await storageRef.getDownloadURL();
-        print("✅ Image uploaded: $downloadUrl");
-
-        if (mounted) {
-          setState(() => _isUploading = false);
-          _showSnackBar(context, "Image uploaded successfully!", color: Colors.green);
-          Navigator.pop(context);
-        }
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isUploading = false);
-        _showSnackBar(context, "Upload failed: $e");
-      }
-    }
-  }
-
-  void _showSnackBar(BuildContext context, String message, {Color color = Colors.red}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Expanded(child: Image.file(File(widget.imagePath))),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-                  child: const Text("Retake"),
-                ),
-                ElevatedButton(
-                  onPressed: () => _uploadImage(context),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.pinkAccent),
-                  child: _isUploading ? CircularProgressIndicator() : const Text("Submit"),
-                ),
-              ],
-            ),
           ),
         ],
       ),

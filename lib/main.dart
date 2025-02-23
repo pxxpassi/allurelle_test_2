@@ -9,6 +9,7 @@ import 'landing_page.dart';
 import 'user_auth/login_page.dart';
 import 'user_auth/signup_page.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:allurelle_test_2/for_you_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +37,7 @@ class MyApp extends StatelessWidget {
         '/profile': (context) => const ProfilePage(),
         '/camera': (context) => const CameraPage(),
         '/skinquiz': (context) => const SkinquizPage(),
+        '/foryou': (context) => const ForYouPage(),
     },
     );
   }

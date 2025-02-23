@@ -14,6 +14,10 @@ class _SkinquizPageState extends State<SkinquizPage> {
   int _currentPage = 0;
   bool _isLastPage = false;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  String userName = ''; // Default user name
+  final User? user = FirebaseAuth.instance.currentUser;
+  Map<String, dynamic>? userData;
+  String profileImageUrl = "assets/default_avatar.webp";
 
   final List<Question> questions = [
     Question(questionText: "What is your skin type?", options: ["Oily", "Dry", "Normal", "Combination"]),
@@ -30,6 +34,19 @@ class _SkinquizPageState extends State<SkinquizPage> {
   void initState() {
     super.initState();
     selectedOptions = List<String?>.filled(questions.length, null);
+    _getUserData();
+  }
+
+  Future<void> _getUserData() async {
+    if (user != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+      setState(() {
+        userData = userDoc.data() as Map<String, dynamic>?;
+        profileImageUrl = (userData?['profile_image'] != null && userData?['profile_image'].isNotEmpty)
+            ? userData!['profile_image']
+            : "assets/default_avatar.webp";
+      });
+    }
   }
 
   void _nextPage() {
@@ -146,18 +163,33 @@ class _SkinquizPageState extends State<SkinquizPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        automaticallyImplyLeading: false,
-        elevation: 0,
-        title: Padding(
-          padding: const EdgeInsets.only(left: 15.0),
-          child: Image.asset(
-            'assets/allurelle_logo.png',
-            height: 50,
-            width: 50,
+          backgroundColor: Colors.transparent,
+          automaticallyImplyLeading: false,
+          elevation: 0,
+          title: Padding(
+            padding: const EdgeInsets.only(left: 15.0),
+            child: Image.asset(
+              'assets/allurelle_logo.png',
+              height: 50,
+              width: 50,
+            ),
           ),
-        ),
-        centerTitle: false,
+          centerTitle: false,
+          actions:[
+            IconButton(
+              icon: const Icon(Icons.notification_add_rounded, color: Colors.pinkAccent, size: 30),
+              onPressed: () {
+                Navigator.pushReplacementNamed(context, '/settings');
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 30.0, left: 10),
+              child: CircleAvatar(
+                backgroundImage: profileImageUrl.startsWith("http")
+                    ? NetworkImage(profileImageUrl)
+                    : AssetImage(profileImageUrl) as ImageProvider,
+              ),
+            ),]
       ),
       body: Column(
         children: [
@@ -219,66 +251,72 @@ class _SkinquizPageState extends State<SkinquizPage> {
 
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.pink[10],
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 10.0,
+        child: SizedBox(
+          height: 50, // Increased height for better label spacing
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(Icons.home, "Home", Colors.grey, () {Navigator.pushReplacementNamed(context, '/homepage');}),
+              _buildNavItem(Icons.analytics_rounded, "For You", Colors.grey, () {
+                Navigator.pushReplacementNamed(context, '/foryou');
+              }),
+              const SizedBox(width: 50), // Spacer for FAB
+              _buildNavItem(Icons.chat, "SkinQuiz", Colors.pinkAccent, () {
+
+              }),
+              _buildNavItem(Icons.person, "Profile", Colors.grey, () {
+                Navigator.pushReplacementNamed(context, '/profile');
+              }),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'History',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(null),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat),
-            label: 'SkinQuiz',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-        selectedItemColor: Colors.pinkAccent,
-        unselectedItemColor: Colors.grey,
-        showUnselectedLabels: true,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushReplacementNamed(context, '/homepage');
-              break;
-            case 1:
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('History Clicked')),
-              );
-              break;
-            case 2:
-              break;
-            case 3:
-              break;
-            case 4:
-              Navigator.pushReplacementNamed(context, '/profile');
-              break;
-          }
-        },
+        ),
       ),
 
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.pinkAccent,
-        onPressed: () {
-          Navigator.pushNamed(context, '/camera');
-        },
-        child: const Icon(Icons.camera_alt, color: Colors.white),
+      floatingActionButton: SizedBox(
+        height: 65, // Adjusts the FAB size
+        width: 65,
+        child: FloatingActionButton(
+          backgroundColor: Colors.pinkAccent,
+          onPressed: () {
+            Navigator.pushNamed(context, '/camera');
+          },
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(50),
+          ),
+          child: const Icon(
+            Icons.camera_alt,
+            color: Colors.white,
+            size: 34, // Enlarges the icon
+          ),
+        ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.miniCenterDocked, // Moves FAB up slightly
+
+    );
+
+  }
+
+  Widget _buildNavItem(IconData icon, String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 35),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: color),
+          ),
+        ],
+      ),
     );
   }
-}
+  }
+
 
 class QuizQuestionWidget extends StatelessWidget {
   final Question question;
