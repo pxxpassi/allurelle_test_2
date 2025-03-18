@@ -18,16 +18,7 @@ class _SkinquizPageState extends State<SkinquizPage> {
   final User? user = FirebaseAuth.instance.currentUser;
   Map<String, dynamic>? userData;
   String profileImageUrl = "assets/default_avatar.webp";
-
-  final List<Question> questions = [
-    Question(questionText: "What is your skin type?", options: ["Oily", "Dry", "Normal", "Combination"]),
-    Question(questionText: "How often do you use sunscreen?", options: ["Every day", "Sometimes", "Rarely", "Never"]),
-    Question(questionText: "Do you have any skin allergies?", options: ["Yes", "No", "Not sure"]),
-    Question(questionText: "How often do you exfoliate your skin?", options: ["Daily", "Weekly", "Monthly", "Never"]),
-    Question(questionText: "What is your age range?", options: ["Under 18", "18-30", "31-50", "50 above"]),
-    Question(questionText: "What is your gender?", options: ["Male", "Female"]),
-  ];
-
+  List<Question> questions = [];
   List<String?> selectedOptions = [];
 
   @override
@@ -40,11 +31,37 @@ class _SkinquizPageState extends State<SkinquizPage> {
   Future<void> _getUserData() async {
     if (user != null) {
       DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+      DocumentSnapshot quizDoc = await FirebaseFirestore.instance.collection('quiz_responses').doc(user!.uid).get();
+
       setState(() {
         userData = userDoc.data() as Map<String, dynamic>?;
         profileImageUrl = (userData?['profile_image'] != null && userData?['profile_image'].isNotEmpty)
             ? userData!['profile_image']
             : "assets/default_avatar.webp";
+
+        List<Question> allQuestions = [
+          Question(questionText: "What is your skin type?", options: ["Oily", "Dry", "Normal", "Combination"]),
+          Question(questionText: "How often do you use sunscreen?", options: ["Every day", "Sometimes", "Rarely", "Never"]),
+          Question(questionText: "Do you have any skin allergies?", options: ["Yes", "No", "Not sure"]),
+          Question(questionText: "How often do you exfoliate your skin?", options: ["Daily", "Weekly", "Monthly", "Never"]),
+          Question(questionText: "What is your age range?", options: ["Under 18", "18-30", "31-50", "50 above"]),
+          Question(questionText: "What is your gender?", options: ["Male", "Female"]),
+        ];
+
+        if (quizDoc.exists) {
+          Map<String, dynamic> quizData = quizDoc.data() as Map<String, dynamic>;
+          List<String> responses = List<String>.from(quizData['responses'] ?? []);
+
+          bool hasGender = responses.length > 5 && responses[5] != true;
+          bool hasAge = responses.length > 4 && responses[4] != true;
+
+          questions = allQuestions.where((q) =>
+          !(q.questionText.contains("What is your gender?") && hasGender) &&
+              !(q.questionText.contains("What is your age range?") && hasAge)).toList();
+        } else {
+          questions = allQuestions;
+        }
+        selectedOptions = List<String?>.filled(questions.length, null);
       });
     }
   }

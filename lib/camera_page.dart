@@ -185,12 +185,6 @@ class _CameraPageState extends State<CameraPage> {
           ),
           centerTitle: false,
           actions:[
-            IconButton(
-              icon: const Icon(Icons.notification_add_rounded, color: Colors.pinkAccent, size: 30),
-              onPressed: () {
-                Navigator.pushReplacementNamed(context, '/settings');
-              },
-            ),
             Padding(
               padding: const EdgeInsets.only(right: 30.0, left: 10),
               child: CircleAvatar(
@@ -227,12 +221,6 @@ class _CameraPageState extends State<CameraPage> {
           ),
           centerTitle: false,
           actions:[
-            IconButton(
-              icon: const Icon(Icons.notification_add_rounded, color: Colors.pinkAccent, size: 30),
-              onPressed: () {
-                Navigator.pushReplacementNamed(context, '/settings');
-              },
-            ),
             Padding(
               padding: const EdgeInsets.only(right: 30.0, left: 10),
               child: CircleAvatar(

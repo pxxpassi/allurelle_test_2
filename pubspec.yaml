@@ -55,6 +55,7 @@ dev_dependencies:
   http: ^0.13.4
   flutter_launcher_icons: ^0.13.1  # Check for the latest version
 
+
 flutter_icons:
   android: true
   ios: true

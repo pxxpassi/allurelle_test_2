@@ -223,16 +223,16 @@ class _ProfilePageState extends State<ProfilePage> {
       leading: Icon(icon),
       trailing: const Icon(Icons.edit),
       onTap: () async {
+        String? newValue;
         if (field == "gender") {
-          String? newValue = await _showGenderEditDialog(userData?[field] ?? '');
-          if (newValue != null && newValue.isNotEmpty) {
-            _updateUserData(field, newValue);
-          }
+          newValue = await _showGenderEditDialog(userData?[field] ?? '');
+        } else if (field == "age") {
+          newValue = await _showAgeEditDialog();
         } else {
-          String? newValue = await _showEditDialog(label, userData?[field] ?? '');
-          if (newValue != null && newValue.isNotEmpty) {
-            _updateUserData(field, newValue);
-          }
+          newValue = await _showEditDialog(label, userData?[field] ?? '');
+        }
+        if (newValue != null && newValue.isNotEmpty) {
+          _updateUserData(field, newValue);
         }
       },
     );
@@ -243,6 +243,10 @@ class _ProfilePageState extends State<ProfilePage> {
       await FirebaseFirestore.instance.collection('users').doc(user!.uid).update({
         field: value,
       });
+      await FirebaseFirestore.instance.collection('quiz_responses').doc(user!.uid).set({
+        field: value,
+      }, SetOptions(merge: true));
+
       _getUserData();
     }
   }
@@ -278,6 +282,51 @@ class _ProfilePageState extends State<ProfilePage> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel", style: TextStyle(color: Colors.red))),
             TextButton(onPressed: () => Navigator.pop(context, selectedGender), child: const Text("Save", style: TextStyle(color: Colors.green))),
           ],
+        );
+      },
+    );
+  }
+
+  Future<String?> _showAgeEditDialog() async {
+    List<String> ageOptions = ["Under 18", "18-30", "31-50", "50 Above"];
+    String selectedAge = userData?["age"] ?? "18-30"; // Ensure a valid default selection
+
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder( // Ensure UI updates when value changes
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text("Edit Age", style: TextStyle(color: Colors.pinkAccent)),
+              content: DropdownButtonFormField<String>(
+                value: selectedAge,
+                decoration: const InputDecoration(labelText: "Select Age Range"),
+                items: ageOptions.map((String age) {
+                  return DropdownMenuItem<String>(
+                    value: age,
+                    child: Text(age),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      selectedAge = newValue;
+                    });
+                  }
+                },
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel", style: TextStyle(color: Colors.red)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, selectedAge),
+                  child: const Text("Save", style: TextStyle(color: Colors.green)),
+                ),
+              ],
+            );
+          },
         );
       },
     );
