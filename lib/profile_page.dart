@@ -127,10 +127,7 @@ class _ProfilePageState extends State<ProfilePage> {
           IconButton(
             icon: const Icon(Icons.login_outlined, color: Colors.pinkAccent, size: 30),
             padding: const EdgeInsets.only(right: 35.0, left: 15),
-            onPressed: () {
-              FirebaseAuth.instance.signOut();
-              Navigator.pushReplacementNamed(context, '/login');
-            },
+            onPressed: () => _showLogoutOverlay(context),
           ),
         ],
       ),
@@ -365,4 +362,76 @@ Widget _buildNavItem(IconData icon, String label, Color color, VoidCallback onTa
       ],
     ),
   );
+}
+
+void _showLogoutOverlay(BuildContext context) {
+
+  OverlayEntry? overlayEntry;
+  overlayEntry = OverlayEntry(
+    builder: (context) => Stack(
+      children: [
+
+        // Background overlay (dimming effect)
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: () => overlayEntry?.remove(), // Dismiss overlay on tap outside
+            child: Container(
+              color: Colors.black54,
+            ),
+          ),
+        ),
+
+        // Centered logout confirmation box
+        Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              width: MediaQuery.of(context).size.width * 0.8,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "Confirm Logout",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Are you sure??",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      TextButton(
+                        onPressed: () => overlayEntry?.remove(),
+                        child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          overlayEntry?.remove();
+                          FirebaseAuth.instance.signOut();
+                          Navigator.pushReplacementNamed(context, '/login');
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.pinkAccent),
+                        child: const Text("Logout", style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Overlay.of(context).insert(overlayEntry);
 }

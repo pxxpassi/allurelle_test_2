@@ -8,7 +8,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 
 class CameraPage extends StatefulWidget {
-  const CameraPage({super.key});
+  final String faceType; // Accept faceType from previous page
+  const CameraPage({super.key, required this.faceType});
 
   @override
   State<CameraPage> createState() => _CameraPageState();
@@ -122,30 +123,31 @@ class _CameraPageState extends State<CameraPage> {
     }
   }
 
-  Future<void> _captureImage() async {
+  Future<void> _captureImage(String faceType) async {
     if (_controller == null || !_controller!.value.isInitialized) return;
 
     try {
       final image = await _controller!.takePicture();
       if (!mounted) return;
-      _navigateToPreview(image.path);
+      _navigateToPreview(image.path, faceType);
     } catch (e) {
       _showSnackBar('Error taking picture: $e');
     }
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImage(String faceType) async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null && mounted) {
-      _navigateToPreview(pickedFile.path);
+      _navigateToPreview(pickedFile.path, faceType);
     }
   }
 
-  void _navigateToPreview(String imagePath) {
+
+  void _navigateToPreview(String imagePath, String faceType) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ImagePreviewPage(imagePath: imagePath),
+        builder: (context) => ImagePreviewPage(imagePath: imagePath, faceType: faceType),
       ),
     );
   }
@@ -266,13 +268,13 @@ class _CameraPageState extends State<CameraPage> {
             child: const Icon(Icons.switch_camera, color: Colors.pinkAccent),
           ),
           FloatingActionButton(
-            onPressed: _captureImage,
+            onPressed: () => _captureImage(widget.faceType), // Fix here
             backgroundColor: Colors.pinkAccent,
             heroTag: 'captureButton',
             child: const Icon(Icons.camera_alt, color: Colors.white),
           ),
           FloatingActionButton(
-            onPressed: _pickImage,
+            onPressed: () => _pickImage(widget.faceType),
             backgroundColor: Colors.white,
             heroTag: 'imagePickerButton',
             child: const Icon(Icons.image, color: Colors.pinkAccent),

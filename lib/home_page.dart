@@ -232,7 +232,7 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     ElevatedButton.icon(
                       onPressed: () {
-                        Navigator.pushNamed(context, '/camera');
+                        Navigator.pushNamed(context, '/faceselection');
                       },
                       icon: const Icon(Icons.camera_alt_outlined, size: 30),
                       label: const Text("Capture Face", style: TextStyle(fontSize: 18)),
@@ -368,7 +368,7 @@ class _HomePageState extends State<HomePage> {
         child: FloatingActionButton(
           backgroundColor: Colors.pinkAccent,
           onPressed: () {
-            Navigator.pushNamed(context, '/camera');
+            Navigator.pushNamed(context, '/faceselection');
           },
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(50),

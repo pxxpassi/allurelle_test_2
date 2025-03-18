@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,20 +8,31 @@ import 'package:image/image.dart' as img;
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
 import 'package:http_parser/http_parser.dart';
-import 'package:allurelle_test_2/analysed_image_page.dart';
+import 'package:allurelle_test_2/image_processing/analysed_image_page.dart';
 
 
 class ImagePreviewPage extends StatefulWidget {
   final String imagePath;
-  const ImagePreviewPage({super.key, required this.imagePath});
+  final String faceType;
+  const ImagePreviewPage({super.key, required this.imagePath, required this.faceType});
 
   @override
   _ImagePreviewPageState createState() => _ImagePreviewPageState();
 }
 
+
 class _ImagePreviewPageState extends State<ImagePreviewPage> {
   bool _isUploading = false;
   String? processedImageUrl;
+  final User? user = FirebaseAuth.instance.currentUser;
+  String profileImageUrl = "assets/default_avatar.webp";
+  Map<String, dynamic>? userData;
+
+  @override
+  void initState() {
+    super.initState();
+    _getUserData();
+  }
 
   Future<File> _compressImage(File file) async {
     final rawImage = img.decodeImage(await file.readAsBytes());
@@ -33,7 +45,19 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     return newFile;
   }
 
-  Future<void> _uploadImage(BuildContext context) async {
+  Future<void> _getUserData() async {
+    if (user != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+      setState(() {
+        userData = userDoc.data() as Map<String, dynamic>?;
+        profileImageUrl = (userData?['profile_image'] != null && userData?['profile_image'].isNotEmpty)
+            ? userData!['profile_image']
+            : "assets/default_avatar.webp";
+      });
+    }
+  }
+
+  Future<void> _uploadImage(BuildContext context, String faceType) async {
     if (_isUploading) return;
     setState(() => _isUploading = true);
 
@@ -50,7 +74,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
         return;
       }
 
-      final fileName = "${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg";
+      final fileName = "${user.uid}_${widget.faceType}_${DateTime.now().millisecondsSinceEpoch}.jpg";
       final storageRef = FirebaseStorage.instance.ref().child('images/$fileName');
 
       final compressedFile = await _compressImage(file);
@@ -65,7 +89,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
         _showOverlayMessage("Image Uploaded Successfully!");
 
         // Send URL to Flask API for processing
-        await _sendToFlaskAPI(context, downloadUrl);
+        await _sendToFlaskAPI(context, downloadUrl, faceType);
       });
     } catch (e) {
       if (mounted) {
@@ -77,8 +101,8 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
   }
 
 
-  Future<void> _sendToFlaskAPI(BuildContext context, String imageUrl) async {
-    final String flaskUrl = "http://192.168.94.137:5000/analyze"; // Update with correct IP
+  Future<void> _sendToFlaskAPI(BuildContext context, String imageUrl, String faceType) async {
+    final String flaskUrl = "http://192.168.250.251:5000/analyze"; // Update with correct IP
 
     try {
       final response = await http.get(Uri.parse(imageUrl));
@@ -106,11 +130,12 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
             processedImageUrl = data["processed_image_url"];  // ✅ Updates UI dynamically
           });
           print("Processed Image Updated: $processedImageUrl");
-          Navigator.push(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (context) => AnalyzedImagePage(processedImageUrl: processedImageUrl!),
+              builder: (context) => AnalysedPage(processedImageUrl: processedImageUrl!, faceType: faceType),
             ),
+                (route) => false, // This removes all previous routes (including camera)
           );
         }
         else {
@@ -166,7 +191,30 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        automaticallyImplyLeading: false,
+        elevation: 0,
+        title: Padding(
+          padding: const EdgeInsets.only(left: 15.0),
+          child: Image.asset(
+            'assets/allurelle_logo.png',
+            height: 50,
+            width: 50,
+          ),
+        ),
+        centerTitle: false,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 30.0, left: 10),
+            child: CircleAvatar(
+              backgroundImage: profileImageUrl.startsWith("http")
+                  ? NetworkImage(profileImageUrl)
+                  : AssetImage(profileImageUrl) as ImageProvider,
+            ),
+          ),
+        ],
+      ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -181,14 +229,19 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: _isUploading ? null : () => Navigator.pop(context), // Disable only if uploading
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.pinkAccent),
                   child: const Text("Retake"),
                 ),
                 ElevatedButton(
-                  onPressed: () => _uploadImage(context),
+                  onPressed: _isUploading ? null : () => _uploadImage(context, widget.faceType),
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.pinkAccent, foregroundColor: Colors.white),
-                  child: _isUploading ? const CircularProgressIndicator() : const Text("Submit"),
+                  child: _isUploading
+                      ? const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20.0),
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                      : const Text("Submit"),
                 ),
               ],
             ),

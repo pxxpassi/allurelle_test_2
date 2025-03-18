@@ -12,6 +12,7 @@ class _LoginPageState extends State<LoginPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  bool _isPasswordVisible = false;
 
   String? errorMessage;
 
@@ -22,12 +23,7 @@ class _LoginPageState extends State<LoginPage> {
         email: emailController.text,
         password: passwordController.text,
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login successful!'),
-          duration: Duration(seconds: 2), // Duration for the message
-        ),
-      );
+      _showOverlayMessage("Login Successful");
 
       // Delay the navigation to allow the SnackBar to show
       Future.delayed(const Duration(seconds: 2), () {
@@ -49,6 +45,34 @@ class _LoginPageState extends State<LoginPage> {
   void _navigateToHomePage() {
     // Navigate to the Home page
     Navigator.pushReplacementNamed(context, '/homepage');
+  }
+
+  void _showOverlayMessage(String message) {
+    OverlayEntry? overlayEntry;
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: 600,
+        left: MediaQuery.of(context).size.width * 0.175 ,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.greenAccent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              message,
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ),
+      ),
+    );
+    Overlay.of(context).insert(overlayEntry);
+    Future.delayed(const Duration(seconds: 2), () {
+      overlayEntry?.remove();
+    });
   }
 
   @override
@@ -144,21 +168,32 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 20),
                       TextField(
                         controller: passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
+                        obscureText: !_isPasswordVisible,
+                        decoration: InputDecoration(
                           labelText: 'Password',
-                          labelStyle: TextStyle(color: Colors.pink),
-                          border: OutlineInputBorder(
+                          labelStyle: const TextStyle(color: Colors.pink),
+                          border: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink),
                           ),
-                          enabledBorder: OutlineInputBorder(
+                          enabledBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink),
                           ),
-                          focusedBorder: OutlineInputBorder(
+                          focusedBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink, width: 2.0),
                           ),
                           filled: true,
                           fillColor: Colors.white,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                              color: Colors.pinkAccent,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -213,3 +248,5 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+
+

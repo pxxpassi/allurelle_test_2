@@ -91,6 +91,9 @@ flutter:
     - assets/4.png
     - assets/5.png
     - assets/default_avatar.webp
+    - assets/face_front.png
+    - assets/face_left.png
+    - assets/face_right.png
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

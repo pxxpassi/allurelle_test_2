@@ -1,4 +1,5 @@
-import 'package:allurelle_test_2/camera_page.dart';
+import 'package:allurelle_test_2/image_processing/camera_page.dart';
+import 'package:allurelle_test_2/image_processing/faceselection_page.dart';
 import 'package:allurelle_test_2/home_page.dart';
 import 'package:allurelle_test_2/profile_page.dart';
 import 'package:allurelle_test_2/settings_page.dart';
@@ -35,9 +36,10 @@ class MyApp extends StatelessWidget {
         '/homepage': (context) => const HomePage(),
         '/settings': (context) => const SettingsPage(),
         '/profile': (context) => const ProfilePage(),
-        '/camera': (context) => const CameraPage(),
+        '/camera': (context) => const CameraPage(faceType: "front"),
         '/skinquiz': (context) => const SkinquizPage(),
         '/foryou': (context) => const ForYouPage(),
+        '/faceselection': (context) => const FaceSelectionPage(),
     },
     );
   }

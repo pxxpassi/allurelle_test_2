@@ -12,6 +12,8 @@ class SignUpPage extends StatefulWidget {
 class _SignUpPageState extends State<SignUpPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isPasswordVisible = false;
+  bool _isreconfirmPasswordVisible = false;
 
   // Define controllers here
   final TextEditingController nameController = TextEditingController();
@@ -64,12 +66,7 @@ class _SignUpPageState extends State<SignUpPage> {
       });
 
       print('User data stored in Firestore successfully');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('SignUp successful!'),
-          duration: Duration(seconds: 2), // Duration for the message
-        ),
-      );
+      _showOverlayMessage("SigUp Successful");
 
       // Delay the navigation to allow the SnackBar to show
       Future.delayed(const Duration(seconds: 2), () {
@@ -91,6 +88,34 @@ class _SignUpPageState extends State<SignUpPage> {
     void _navigateToLogin() {
     // Navigate to the Login page
     Navigator.pushReplacementNamed(context, '/login');
+  }
+
+  void _showOverlayMessage(String message) {
+    OverlayEntry? overlayEntry;
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: 600,
+        left: MediaQuery.of(context).size.width * 0.175 ,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.greenAccent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              message,
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ),
+      ),
+    );
+    Overlay.of(context).insert(overlayEntry);
+    Future.delayed(const Duration(seconds: 2), () {
+      overlayEntry?.remove();
+    });
   }
 
   @override
@@ -209,41 +234,63 @@ class _SignUpPageState extends State<SignUpPage> {
                       const SizedBox(height: 20),
                       TextField(
                         controller: passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Set Password',
-                          labelStyle: TextStyle(color: Colors.pink),
-                          border: OutlineInputBorder(
+                        obscureText: !_isPasswordVisible,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          labelStyle: const TextStyle(color: Colors.pink),
+                          border: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink),
                           ),
-                          enabledBorder: OutlineInputBorder(
+                          enabledBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink),
                           ),
-                          focusedBorder: OutlineInputBorder(
+                          focusedBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink, width: 2.0),
                           ),
                           filled: true,
                           fillColor: Colors.white,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                              color: Colors.pinkAccent,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),
                       TextField(
                         controller: reconfirmPasswordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
+                        obscureText: !_isreconfirmPasswordVisible,
+                        decoration: InputDecoration(
                           labelText: 'Reconfirm Password',
-                          labelStyle: TextStyle(color: Colors.pink),
-                          border: OutlineInputBorder(
+                          labelStyle: const TextStyle(color: Colors.pink),
+                          border: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink),
                           ),
-                          enabledBorder: OutlineInputBorder(
+                          enabledBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink),
                           ),
-                          focusedBorder: OutlineInputBorder(
+                          focusedBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.pink, width: 2.0),
                           ),
                           filled: true,
                           fillColor: Colors.white,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isreconfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                              color: Colors.pinkAccent,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isreconfirmPasswordVisible = !_isreconfirmPasswordVisible;
+                              });
+                            },
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),
