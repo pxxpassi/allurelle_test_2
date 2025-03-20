@@ -200,13 +200,19 @@ class _ProfilePageState extends State<ProfilePage> {
 
       floatingActionButton: Visibility(
         visible: MediaQuery.of(context).viewInsets.bottom == 0, // Hide FAB when keyboard opens
-        child: FloatingActionButton(
-          backgroundColor: Colors.pinkAccent,
-          onPressed: () {
-            Navigator.pushNamed(context, '/camera');
-          },
-          shape: const CircleBorder(),
-          child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
+        child: SizedBox(
+          width: 65,
+          height: 65,
+          child: FloatingActionButton(
+            backgroundColor: Colors.pinkAccent,
+            onPressed: () {
+              Navigator.pushNamed(context, '/faceselection');
+            },
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50), // Ensures circular shape
+            ),
+            child: const Icon(Icons.camera_alt, color: Colors.white, size: 34), // Adjusted icon size
+          ),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,

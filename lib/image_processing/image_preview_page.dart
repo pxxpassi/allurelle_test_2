@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'dart:typed_data';
 import 'package:http_parser/http_parser.dart';
 import 'package:allurelle_test_2/image_processing/analysed_image_page.dart';
+// import 'package:connectivity_plus/connectivity_plus.dart';
 
 
 class ImagePreviewPage extends StatefulWidget {
@@ -27,6 +28,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
   final User? user = FirebaseAuth.instance.currentUser;
   String profileImageUrl = "assets/default_avatar.webp";
   Map<String, dynamic>? userData;
+  List<Map<String, dynamic>> detectedIssues = [];
 
   @override
   void initState() {
@@ -57,12 +59,11 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     }
   }
 
-  Future<void> _uploadImage(BuildContext context, String faceType) async {
+  Future<void> _uploadImage(BuildContext context) async {
     if (_isUploading) return;
     setState(() => _isUploading = true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         _showSnackBar(context, "User not authenticated");
         return;
@@ -74,91 +75,137 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
         return;
       }
 
-      final fileName = "${user.uid}_${widget.faceType}_${DateTime.now().millisecondsSinceEpoch}.jpg";
+      // Generate unique image ID
+      String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      String imageId = "${widget.faceType}_$timestamp";
+      String fileName = "$imageId.jpg";
       final storageRef = FirebaseStorage.instance.ref().child('images/$fileName');
 
       final compressedFile = await _compressImage(file);
       final fileBytes = await compressedFile.readAsBytes();
-
       UploadTask uploadTask = storageRef.putData(fileBytes);
 
       await uploadTask.whenComplete(() async {
-        final downloadUrl = await storageRef.getDownloadURL();
-        print("Image uploaded: $downloadUrl");
-
-        _showOverlayMessage("Image Uploaded Successfully!");
-
-        // Send URL to Flask API for processing
-        await _sendToFlaskAPI(context, downloadUrl, faceType);
+        final uploadedImageUrl = await storageRef.getDownloadURL();
+        await _sendToFlaskAPI(context, uploadedImageUrl);
       });
     } catch (e) {
-      if (mounted) {
-        setState(() => _isUploading = false);
-        _showSnackBar(context, "Upload failed: $e");
-
-      }
+      _showSnackBar(context, "Upload failed: $e");
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
     }
   }
 
 
-  Future<void> _sendToFlaskAPI(BuildContext context, String imageUrl, String faceType) async {
-    final String flaskUrl = "http://192.168.250.251:5000/analyze"; // Update with correct IP
 
+  Future<String> getIpAddress() async {
+    try {
+      for (var interface in await NetworkInterface.list()) {
+        for (var addr in interface.addresses) {
+          if (addr.type == InternetAddressType.IPv4 &&
+              addr.address.startsWith('192.168.')) {
+            return addr.address;
+          }
+        }
+      }
+      throw Exception("No local network IP found");
+    } catch (e) {
+      throw Exception("Failed to get IP: $e");
+    }
+  }
+
+  Future<String> getFlaskUrl() async {
+    String ipAddress = await getIpAddress();
+    return 'http://192.168.118.137:5000/analyze';
+  }
+
+  Future<void> _sendToFlaskAPI(BuildContext context, String imageUrl) async {
     try {
       final response = await http.get(Uri.parse(imageUrl));
-      if (response.statusCode != 200) {
-        throw Exception("Failed to download image from Firebase.");
-      }
+      if (response.statusCode != 200) throw Exception("Failed to download image");
 
       Uint8List imageBytes = response.bodyBytes;
+      var request = http.MultipartRequest("POST", Uri.parse('http://192.168.250.251:5000/analyze'))
+        ..files.add(http.MultipartFile.fromBytes('image', imageBytes, filename: "uploaded.jpg", contentType: MediaType("image", "jpeg")));
 
-      var request = http.MultipartRequest("POST", Uri.parse(flaskUrl))
-        ..files.add(http.MultipartFile.fromBytes(
-          'image',
-          imageBytes,
-          filename: "uploaded_image.jpg",
-          contentType: MediaType("image", "jpeg"),
-        ));
-
-      var streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+      var streamedResponse = await request.send();
       var responseData = await streamedResponse.stream.bytesToString();
-
       if (streamedResponse.statusCode == 200) {
+        var jsonResponse = json.decode(responseData);
         final Map<String, dynamic> data = jsonDecode(responseData);
+
         if (data.containsKey("processed_image_url")) {
-          setState(() {
-            processedImageUrl = data["processed_image_url"];  // ✅ Updates UI dynamically
-          });
-          print("Processed Image Updated: $processedImageUrl");
+          String processedImageUrl = data["processed_image_url"];
+          String firebaseProcessedImageUrl = await _uploadProcessedImageToStorage(processedImageUrl);
+          await _saveProcessedImageToFirestore(imageUrl, firebaseProcessedImageUrl);
+          if (mounted) {
+            setState(() => this.processedImageUrl = firebaseProcessedImageUrl);
+            detectedIssues = List<Map<String, dynamic>>.from(jsonResponse["issues_detected"]);
+          }
+
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (context) => AnalysedPage(processedImageUrl: processedImageUrl!, faceType: faceType),
+              builder: (context) => AnalysedPage(uploadedImageUrl: imageUrl, processedImageUrl: firebaseProcessedImageUrl, faceType: widget.faceType),
             ),
-                (route) => false, // This removes all previous routes (including camera)
+                (route) => false,
           );
         }
-        else {
-          throw Exception("Invalid response from API");
-        }
       } else {
-        throw Exception("Failed to process image: ${streamedResponse.statusCode}");
+        throw Exception("Processing failed");
       }
     } catch (e) {
       _showSnackBar(context, "Error: $e");
-    } finally {
-      if (mounted) {
-        setState(() => _isUploading = false);
-      }
+    }
+  }
+
+  Future<String> _uploadProcessedImageToStorage(String processedImageUrl) async {
+    final response = await http.get(Uri.parse(processedImageUrl));
+
+    if (response.statusCode != 200) throw Exception("Failed to download processed image");
+
+    Uint8List imageBytes = response.bodyBytes;
+    String fileName = "${user!.uid}_${widget.faceType}_processed_${DateTime.now().millisecondsSinceEpoch}.jpg";
+    Reference storageRef = FirebaseStorage.instance.ref().child('processed_images/$fileName');
+    UploadTask uploadTask = storageRef.putData(imageBytes);
+    TaskSnapshot taskSnapshot = await uploadTask;
+    return await taskSnapshot.ref.getDownloadURL();
+  }
+
+  Future<void> _saveProcessedImageToFirestore(String uploadedImageUrl, String processedImageUrl) async {
+    try {
+      String timestamp = DateTime.now().toString();
+      String imageId = "${widget.faceType}_$timestamp"; // Unique image ID
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid)
+          .collection('image_responses')
+          .doc(imageId)
+          .set({
+        'imageId': imageId,
+        'uploadedImageUrl': uploadedImageUrl,
+        'processedImageUrl': processedImageUrl,
+        'faceType': widget.faceType,
+        'detectedIssues': detectedIssues,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      print("✅ Processed Image metadata saved to Firestore with ID: $imageId");
+
+      _showOverlayMessage("Image Processed Succesfully");
+    } catch (e) {
+      throw Exception("❌ Failed to save processed image metadata to Firestore: $e");
     }
   }
 
 
-  void _showSnackBar(BuildContext context, String message, {Color color = Colors.red}) {
+  void _showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color),
+      SnackBar(content: Text(message)),
     );
   }
+
 
   void _showOverlayMessage(String message) {
     OverlayEntry? overlayEntry;
@@ -234,7 +281,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                   child: const Text("Retake"),
                 ),
                 ElevatedButton(
-                  onPressed: _isUploading ? null : () => _uploadImage(context, widget.faceType),
+                  onPressed: _isUploading ? null : () => _uploadImage(context),
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.pinkAccent, foregroundColor: Colors.white),
                   child: _isUploading
                       ? const Padding(

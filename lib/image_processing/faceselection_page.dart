@@ -1,3 +1,4 @@
+import 'package:allurelle_test_2/image_processing/camera_page.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -85,10 +86,15 @@ class _FaceSelectionPage extends State<FaceSelectionPage> {
   }
 
   Widget _buildFaceOption(BuildContext context, String label, String imagePath,
-      String faceSide) {
+      String faceType) {
     return GestureDetector(
       onTap: () {
-        Navigator.pushNamed(context, '/camera', arguments: faceSide);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CameraPage(faceType: faceType),
+          ),
+        );
       },
       child: Center( // Ensures each button is centered
         child: Container(

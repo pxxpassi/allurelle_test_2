@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+//import 'package:firebase_storage/firebase_storage.dart';
 
 class ForYouPage extends StatefulWidget {
   const ForYouPage({super.key});
@@ -16,78 +17,278 @@ class _ForYouPageState extends State<ForYouPage> {
 
   Map<String, dynamic>? latestImage;
   Map<String, dynamic>? latestQuizResponse;
+  List<Map<String, dynamic>> latestImages = [];
 
-  Future<void> _fetchLatestData() async {
-    if (user == null) return;
-
-    try {
-      // Ensure userData is fetched before querying
-      if (userData == null) {
-        await _getUserData();
-      }
-
-      // Fetch latest image based on user ID and createdAt timestamp
-      QuerySnapshot imageSnapshot = await FirebaseFirestore.instance
+  Future<void> _getUserData() async {
+    if (user != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user!.uid)
-          .collection('images')
-          .orderBy('createdAt', descending: true)
-          .limit(1)
           .get();
 
-      if (imageSnapshot.docs.isNotEmpty) {
-        setState(() {
-          latestImage = imageSnapshot.docs.first.data() as Map<String, dynamic>;
-        });
-        print("✅ Latest Image Data: $latestImage");
-      } else {
-        print("❌ No image found.");
+      if (userDoc.exists) {
+        final userData = userDoc.data() as Map<String, dynamic>?;
+        if (userData != null &&
+            userData.containsKey('profile_image') &&
+            userData['profile_image'].isNotEmpty) {
+          setState(() {
+            profileImageUrl = userData['profile_image'];
+          });
+        }
       }
-
-      // Fetch latest quiz response based on user ID and createdAt timestamp
-      QuerySnapshot quizSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user!.uid)
-          .collection('skinquiz_responses')
-          .orderBy('createdAt', descending: true)
-          .limit(1)
-          .get();
-
-      if (quizSnapshot.docs.isNotEmpty) {
-        setState(() {
-          latestQuizResponse = quizSnapshot.docs.first.data() as Map<String, dynamic>;
-        });
-        print("✅ Latest Quiz Data: $latestQuizResponse");
-      } else {
-        print("❌ No quiz response found.");
-      }
-    } catch (e) {
-      print("⚠️ Error fetching latest data: $e");
     }
   }
 
+  Future<void> _fetchLatestImageResponse(String userID) async {
+    if (user == null) return;
+
+    try {
+      print("🔄 Fetching latest image responses...");
+
+      QuerySnapshot imageSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid)
+          .collection('image_responses')
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      // Face types to track
+      Map<String, Map<String, dynamic>?> latestImagesMap = {
+        "front": null,
+        "left": null,
+        "right": null,
+      };
+
+      if (imageSnapshot.docs.isNotEmpty) {
+        for (var doc in imageSnapshot.docs) {
+          var imageData = doc.data() as Map<String, dynamic>;
+          String faceType = imageData['faceType'] ?? "unknown";
+
+          if (latestImagesMap.containsKey(faceType) && latestImagesMap[faceType] == null) {
+            latestImagesMap[faceType] = {
+              'faceType': faceType,
+              'imageId': imageData['imageId'] ?? "",
+              'uploadedImageUrl': imageData['uploadedImageUrl'] ?? "",
+              'processedImageUrl': imageData['processedImageUrl'] ?? "",
+              'createdAt': imageData['createdAt'] ?? "",
+            };
+          }
+
+          if (!latestImagesMap.values.contains(null)) break;
+        }
+      }
+
+      setState(() {
+        latestImages = latestImagesMap.entries
+            .where((entry) => entry.value != null)
+            .map((entry) => entry.value!)
+            .toList();
+      });
+
+      print("✅ Latest Images: $latestImages");
+    } catch (e) {
+      print("⚠️ Error fetching latest image responses: $e");
+    }
+  }
+
+
+
+
+  Future<void> fetchLatestQuizResponse(String userID) async {
+    try {
+      var querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid)
+          .collection('skinquiz_responses')
+          .orderBy('createdAt', descending: true) // Ensure `createdAt` exists
+          .limit(1) // Fetch latest quiz
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        var latestQuizDoc = querySnapshot.docs.first;
+        var quizData = latestQuizDoc.data();
+
+        // Debugging: Print the fetched data
+        print("🔥 Fetched Quiz Data: $quizData");
+
+        setState(() {
+          latestQuizResponse = {
+            'createdAt': quizData['createdAt'].toDate().toString(),  // Convert Firestore Timestamp
+            'skinType': quizData['responses']?[0] ?? 'N/A',
+            'sunscreenUsage': quizData['responses']?[1] ?? 'N/A',
+            'skinAllergies': quizData['responses']?[2] ?? 'N/A',
+            'exfoliationFrequency': quizData['responses']?[3] ?? 'N/A',
+          };
+        });
+      } else {
+        print("❌ No quiz responses found");
+        setState(() {
+          latestQuizResponse = null;
+        });
+      }
+    } catch (e) {
+      print("⚠️ Error fetching latest quiz response: $e");
+      setState(() {
+        latestQuizResponse = null;
+      });
+    }
+  }
 
 
   @override
   void initState() {
     super.initState();
     _getUserData().then((_) {
-      _fetchLatestData();
+      _fetchLatestImageResponse(user!.uid);
+      fetchLatestQuizResponse(user!.uid);
     });
   }
 
 
-  Future<void> _getUserData() async {
-    if (user != null) {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
-      setState(() {
-        userData = userDoc.data() as Map<String, dynamic>?;
-        profileImageUrl = (userData?['profile_image'] != null && userData?['profile_image'].isNotEmpty)
-            ? userData!['profile_image']
-            : "assets/default_avatar.webp";
-      });
+
+  Widget latestDataCard() {
+    if (latestQuizResponse == null && latestImages.isEmpty) {
+      return const Center(
+        child: Text(
+          "No recent data available.",
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      );
     }
+
+    // Define all possible face types to ensure each is displayed
+    List<String> allFaceTypes = ["front","left","right"];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (latestQuizResponse != null) ...[
+          Text("Latest Skin Quiz Response",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.pinkAccent)),
+          const SizedBox(height: 5),
+          Text("Skin Type: ${latestQuizResponse!['skinType']}", style: TextStyle(fontSize: 16, color: Colors.black87)),
+          Text("Sunscreen Usage: ${latestQuizResponse!['sunscreenUsage']}", style: TextStyle(fontSize: 16, color: Colors.black87)),
+          Text("Skin Allergies: ${latestQuizResponse!['skinAllergies']}", style: TextStyle(fontSize: 16, color: Colors.black87)),
+          Text("Exfoliation Frequency: ${latestQuizResponse!['exfoliationFrequency']}", style: TextStyle(fontSize: 16, color: Colors.black87)),
+          const SizedBox(height: 20),
+        ],
+
+        Text("Latest Analyzed Images",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.pinkAccent)),
+        const SizedBox(height: 5),
+
+        ListView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          itemCount: allFaceTypes.length,
+          itemBuilder: (context, index) {
+            String faceType = allFaceTypes[index].toUpperCase();
+
+            // Find the image data for this face type, if it exists
+            var image = latestImages.firstWhere(
+                  (img) => img['faceType'].toString().toUpperCase() == faceType,
+              orElse: () => <String, dynamic>{}, // ✅ Ensures the correct return type
+            );
+
+            bool hasProcessedImage = image['processedImageUrl']?.isNotEmpty ?? false;
+            //bool hasOriginalImage = image?['uploadedImageUrl']?.isNotEmpty ?? false;
+
+
+            return Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              margin: const EdgeInsets.only(bottom: 10),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("$faceType Face",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    const SizedBox(height: 8),
+
+                    // Processed Image or Warning Box
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: hasProcessedImage
+                          ? Image.network(
+                        image['processedImageUrl']!,
+                        height: 400,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.warning, size: 80, color: Colors.orange),
+                      )
+                          : Container(
+                        height: 150,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.red[100],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.warning, size: 80, color: Colors.red),
+                              SizedBox(height: 10),
+                              Text("No Processed Image Available",
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    /*const SizedBox(height: 10),
+
+                    Text("Original $faceType Face",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    const SizedBox(height: 8),
+
+                    // Original Image or Warning Box
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: hasOriginalImage
+                          ? Image.network(
+                        image['uploadedImageUrl']!,
+                        height: 140,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.warning, size: 50, color: Colors.red),
+                      )
+                          : Container(
+                        height: 140,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.warning, size: 50, color: Colors.red),
+                              SizedBox(height: 10),
+                              Text("No Original Image Available",
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),*/
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -131,20 +332,19 @@ class _ForYouPageState extends State<ForYouPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               latestDataCard(),
-              ElevatedButton.icon(
+              const SizedBox(height: 20),
+              ElevatedButton(
                 onPressed: () {
-                  Navigator.pushNamed(context, '/analytics');
+                  // Call API to generate recommendations OR navigate to recommendation page
+                  Navigator.pushNamed(context, '/recommendations');
                 },
-                icon: const Icon(Icons.bar_chart, size: 30),
-                label: const Text("View Latest Analytics", style: TextStyle(fontSize: 18)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.pink[50],
-                  foregroundColor: Colors.pinkAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20.0),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 14.6, horizontal: 20),
+                  backgroundColor: Colors.pinkAccent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+                  padding: EdgeInsets.symmetric(vertical: 14.6, horizontal: 20),
                 ),
+                child: Text("Recommend Me", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 20),
 
@@ -176,6 +376,7 @@ class _ForYouPageState extends State<ForYouPage> {
           ),
         ),
       ),
+
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 10.0,
@@ -206,7 +407,7 @@ class _ForYouPageState extends State<ForYouPage> {
         child: FloatingActionButton(
           backgroundColor: Colors.pinkAccent,
           onPressed: () {
-            Navigator.pushNamed(context, '/camera');
+            Navigator.pushNamed(context, '/faceselection');
           },
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(50),
@@ -219,68 +420,6 @@ class _ForYouPageState extends State<ForYouPage> {
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.miniCenterDocked,
-    );
-  }
-
-  Widget latestDataCard() {
-    if (latestImage == null && latestQuizResponse == null) {
-      return const Center(
-        child: Text(
-          "No recent data available.",
-          style: TextStyle(fontSize: 16, color: Colors.grey),
-        ),
-      );
-    }
-
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      margin: const EdgeInsets.only(bottom: 20),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (latestImage != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("Latest Analysis Image",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.pinkAccent)),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.network(
-                      latestImage!['imageUrl'] ?? "",
-                      height: 120,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.error, size: 80, color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            const SizedBox(height: 15),
-            if (latestQuizResponse != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("Latest Skin Quiz Response",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.pinkAccent)),
-                  const SizedBox(height: 5),
-                  Text(
-                    "Skin Type: ${latestQuizResponse!['skinType'] ?? 'N/A'}",
-                    style: const TextStyle(fontSize: 14, color: Colors.black87),
-                  ),
-                  Text(
-                    "Concerns: ${latestQuizResponse!['concerns']?.join(", ") ?? 'N/A'}",
-                    style: const TextStyle(fontSize: 14, color: Colors.black87),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ),
     );
   }
 

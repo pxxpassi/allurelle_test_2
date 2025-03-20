@@ -2,6 +2,7 @@ import 'package:allurelle_test_2/image_processing/camera_page.dart';
 import 'package:allurelle_test_2/image_processing/faceselection_page.dart';
 import 'package:allurelle_test_2/home_page.dart';
 import 'package:allurelle_test_2/profile_page.dart';
+import 'package:allurelle_test_2/recommendation_page.dart';
 import 'package:allurelle_test_2/settings_page.dart';
 import 'package:allurelle_test_2/skinquiz_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -40,6 +41,7 @@ class MyApp extends StatelessWidget {
         '/skinquiz': (context) => const SkinquizPage(),
         '/foryou': (context) => const ForYouPage(),
         '/faceselection': (context) => const FaceSelectionPage(),
+        '/recommendations': (context) => const RecommendationPage(),
     },
     );
   }

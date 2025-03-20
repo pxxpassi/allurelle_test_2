@@ -131,20 +131,30 @@ class _SkinquizPageState extends State<SkinquizPage> {
     }
 
     try {
-      await FirebaseFirestore.instance.collection('quiz_responses').doc(user.uid).set({
+      // Get a reference to the Firestore collection and create a new document with an auto-generated ID
+      DocumentReference docRef = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('skinquiz_responses')
+          .add({
         'responses': selectedOptions,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
       _showOverlayMessage("Quiz Submitted Successfully!", success: true);
+
       Future.delayed(const Duration(seconds: 2), () {
         Navigator.pushReplacementNamed(context, '/homepage');
       });
 
+      print("✅ Quiz response saved with ID: ${docRef.id}");
+
     } catch (e) {
       _showOverlayMessage("Submission Failed. Try again!");
+      print("⚠️ Error submitting quiz: $e");
     }
   }
+
 
   void _showOverlayMessage(String message, {bool success = false}) {
     OverlayEntry? overlayEntry;
@@ -298,7 +308,7 @@ class _SkinquizPageState extends State<SkinquizPage> {
         child: FloatingActionButton(
           backgroundColor: Colors.pinkAccent,
           onPressed: () {
-            Navigator.pushNamed(context, '/camera');
+            Navigator.pushNamed(context, '/faceselection');
           },
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(50),
