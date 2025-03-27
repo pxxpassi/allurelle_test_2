@@ -40,7 +40,7 @@ class _SkinquizPageState extends State<SkinquizPage> {
             : "assets/default_avatar.webp";
 
         List<Question> allQuestions = [
-          Question(questionText: "What is your skin type?", options: ["Oily", "Dry", "Normal", "Combination"]),
+          Question(questionText: "What is your skin type?", options: ["Oily", "Dry", "Normal", "Combination","Sensitive"]),
           Question(questionText: "How often do you use sunscreen?", options: ["Every day", "Sometimes", "Rarely", "Never"]),
           Question(questionText: "Do you have any skin allergies?", options: ["Yes", "No", "Not sure"]),
           Question(questionText: "How often do you exfoliate your skin?", options: ["Daily", "Weekly", "Monthly", "Never"]),

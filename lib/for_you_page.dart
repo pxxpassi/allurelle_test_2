@@ -379,7 +379,7 @@ class _ForYouPageState extends State<ForYouPage> {
 
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
-        notchMargin: 10.0,
+        notchMargin: 5.0,
         child: SizedBox(
           height: 50, // Increased height for better label spacing
           child: Row(
@@ -407,13 +407,13 @@ class _ForYouPageState extends State<ForYouPage> {
         child: FloatingActionButton(
           backgroundColor: Colors.pinkAccent,
           onPressed: () {
-            Navigator.pushNamed(context, '/faceselection');
+            Navigator.pushNamed(context, '/recommendations');
           },
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(50),
           ),
           child: const Icon(
-            Icons.camera_alt,
+            Icons.water_drop,
             color: Colors.white,
             size: 34, // Enlarges the icon
           ),

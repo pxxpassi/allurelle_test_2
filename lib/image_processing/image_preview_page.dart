@@ -125,7 +125,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
       if (response.statusCode != 200) throw Exception("Failed to download image");
 
       Uint8List imageBytes = response.bodyBytes;
-      var request = http.MultipartRequest("POST", Uri.parse('http://192.168.250.251:5000/analyze'))
+      var request = http.MultipartRequest("POST", Uri.parse('http://172.16.20.58:5000/analyze'))
         ..files.add(http.MultipartFile.fromBytes('image', imageBytes, filename: "uploaded.jpg", contentType: MediaType("image", "jpeg")));
 
       var streamedResponse = await request.send();
@@ -137,10 +137,14 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
         if (data.containsKey("processed_image_url")) {
           String processedImageUrl = data["processed_image_url"];
           String firebaseProcessedImageUrl = await _uploadProcessedImageToStorage(processedImageUrl);
-          await _saveProcessedImageToFirestore(imageUrl, firebaseProcessedImageUrl);
+
+          detectedIssues = List<Map<String, dynamic>>.from(jsonResponse["issues_detected"]);
+          print("Detected Issues: $detectedIssues");
+          await _saveProcessedImageToFirestore(imageUrl, firebaseProcessedImageUrl,detectedIssues);
+
           if (mounted) {
             setState(() => this.processedImageUrl = firebaseProcessedImageUrl);
-            detectedIssues = List<Map<String, dynamic>>.from(jsonResponse["issues_detected"]);
+
           }
 
           Navigator.pushAndRemoveUntil(
@@ -159,6 +163,8 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     }
   }
 
+
+
   Future<String> _uploadProcessedImageToStorage(String processedImageUrl) async {
     final response = await http.get(Uri.parse(processedImageUrl));
 
@@ -172,10 +178,18 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     return await taskSnapshot.ref.getDownloadURL();
   }
 
-  Future<void> _saveProcessedImageToFirestore(String uploadedImageUrl, String processedImageUrl) async {
+  Future<void> _saveProcessedImageToFirestore(String uploadedImageUrl, String processedImageUrl, List<Map<String, dynamic>> detectedIssues) async {
     try {
       String timestamp = DateTime.now().toString();
       String imageId = "${widget.faceType}_$timestamp"; // Unique image ID
+
+      List<String> issueNames = detectedIssues.map((issue) {
+        String label = issue["label"];
+        return label.split(" (")[0]; // Extract text before " ("
+      }).toList();
+
+      Set<String> issueNamesSet = issueNames.toSet();
+
 
       await FirebaseFirestore.instance
           .collection('users')
@@ -187,7 +201,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
         'uploadedImageUrl': uploadedImageUrl,
         'processedImageUrl': processedImageUrl,
         'faceType': widget.faceType,
-        'detectedIssues': detectedIssues,
+        'detectedIssues': issueNamesSet,
         'createdAt': FieldValue.serverTimestamp(),
       });
 

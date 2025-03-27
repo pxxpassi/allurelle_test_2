@@ -95,7 +95,7 @@ class _SignUpPageState extends State<SignUpPage> {
     overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         top: 600,
-        left: MediaQuery.of(context).size.width * 0.175 ,
+        left: MediaQuery.of(context).size.width * 0.25 ,
         child: Material(
           color: Colors.transparent,
           child: Container(

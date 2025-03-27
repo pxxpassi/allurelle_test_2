@@ -340,7 +340,7 @@ class _HomePageState extends State<HomePage> {
       // Bottom Navigation Bar with Floating Button
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
-        notchMargin: 10.0,
+        notchMargin: 5.0,
         child: SizedBox(
           height: 50, // Increased height for better label spacing
           child: Row(

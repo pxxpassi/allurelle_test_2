@@ -52,13 +52,13 @@ class _LoginPageState extends State<LoginPage> {
     overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         top: 600,
-        left: MediaQuery.of(context).size.width * 0.175 ,
+        left: MediaQuery.of(context).size.width * 0.25 ,
         child: Material(
           color: Colors.transparent,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.greenAccent,
+              color: Colors.green,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
