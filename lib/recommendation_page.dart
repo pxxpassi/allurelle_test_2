@@ -53,26 +53,6 @@ class _RecommendationPageState extends State<RecommendationPage> {
   Future<void> _fetchLatestImagesAndQuiz() async {
     if (user == null) return;
 
-    // Fetch latest images
-    QuerySnapshot imageDocs = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user!.uid)
-        .collection('image_responses')
-        .orderBy('timestamp', descending: true)
-        .limit(3)
-        .get();
-
-    if (imageDocs.docs.isNotEmpty) {
-      List<Map<String, dynamic>> images = imageDocs.docs.map((doc) {
-        return doc.data() as Map<String, dynamic>;
-      }).toList();
-
-      setState(() {
-        latestImages = images;
-        detectedIssues = _extractDetectedIssues(images);
-      });
-    }
-
     // Fetch latest skin quiz responses
     QuerySnapshot<Map<String, dynamic>> quizSnapshot = await FirebaseFirestore.instance
         .collection('users')
@@ -88,9 +68,6 @@ class _RecommendationPageState extends State<RecommendationPage> {
         .collection('image_responses')
         .orderBy('createdAt', descending: true)
         .get();
-
-
-
 
     print("fetched");
 
@@ -155,7 +132,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
   }
 
   Future<void> _sendRecommendationRequest() async {
-    const String serverUrl = "http://172.16.20.58:5000/recommend";
+    const String serverUrl = "http://192.168.202.137:5000/recommend";
 
     if (skinQuizResponses == null) {
       print("❌ No skin quiz responses found.");
@@ -192,15 +169,19 @@ class _RecommendationPageState extends State<RecommendationPage> {
 
           if (rawProducts is Map<String, dynamic>) {
             setState(() {
-              recommendedProducts = rawProducts
-                  .values
-                  .expand((category) => category is List ? category : []) // Ensure only lists
-                  .whereType<Map<String, dynamic>>() // Filter out invalid types
+              recommendedProducts = rawProducts.entries
+                  .map((entry) {
+                // Convert category key-value pairs into a standard format
+                Map<String, dynamic> product = entry.value;
+                product["Category"] = entry.key; // Add category name to product data
+                return product;
+              })
                   .toList();
             });
-          }}
+          }
+          print("✅ Processed Recommended Products: $recommendedProducts");}
 
-      else {
+    else {
           print("❌ Unexpected response structure: ${decodedResponse}");
         }
       } else {
@@ -256,16 +237,16 @@ class _RecommendationPageState extends State<RecommendationPage> {
             recommendedProducts.isEmpty
                 ? Text("No recommendations yet.")
                 : Expanded(
-              child: recommendedProducts.isEmpty
-                  ? Center(child: Text("No recommendations yet."))
-                  : ListView.builder(
-                      itemCount: recommendedProducts.length,
-                      itemBuilder: (context, index) {
-                        final product = recommendedProducts[index];
-                        return ListTile(
-                          title: Text(product['Name'] ?? 'Unknown Product'),
-                          subtitle: Text("${product['Brand'] ?? 'Unknown Brand'} - ${product['Type'] ?? 'N/A'} - \$${product['Price'] ?? 'N/A'}"),
-                        );
+                  child: recommendedProducts.isEmpty
+                      ? Center(child: Text("No recommendations yet."))
+                      : ListView.builder(
+                          itemCount: recommendedProducts.length,
+                          itemBuilder: (context, index) {
+                            final product = recommendedProducts[index];
+                            return ListTile(
+                              title: Text(product['Name'] ?? 'Unknown Product'),
+                              subtitle: Text("${product['Brand'] ?? 'Unknown Brand'} - ${product['Category'] ?? 'N/A'} - \$${product['Price'] ?? 'N/A'}"),
+                            );
                 },
               ),
             ),

@@ -125,7 +125,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
       if (response.statusCode != 200) throw Exception("Failed to download image");
 
       Uint8List imageBytes = response.bodyBytes;
-      var request = http.MultipartRequest("POST", Uri.parse('http://172.16.20.58:5000/analyze'))
+      var request = http.MultipartRequest("POST", Uri.parse('http://192.168.202.137:5000/analyze'))
         ..files.add(http.MultipartFile.fromBytes('image', imageBytes, filename: "uploaded.jpg", contentType: MediaType("image", "jpeg")));
 
       var streamedResponse = await request.send();
