@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 //import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class ForYouPage extends StatefulWidget {
   const ForYouPage({super.key});
@@ -18,6 +20,20 @@ class _ForYouPageState extends State<ForYouPage> {
   Map<String, dynamic>? latestImage;
   Map<String, dynamic>? latestQuizResponse;
   List<Map<String, dynamic>> latestImages = [];
+  List<String> detectedIssues = [];
+  Map<String, dynamic>? skinQuizResponses;
+  List<Map<String, dynamic>> recommendedProducts =[];
+  String? skinType;
+  String? product;
+
+  final imageAssets = [
+    'assets/1.png',
+    'assets/2.png',
+    'assets/3.png',
+    'assets/4.png',
+    'assets/5.png',
+    'assets/1.png',
+  ];
 
   Future<void> _getUserData() async {
     if (user != null) {
@@ -37,6 +53,77 @@ class _ForYouPageState extends State<ForYouPage> {
         }
       }
     }
+  }
+
+  Future<void> _fetchLatestImagesAndQuiz() async {
+    if (user == null) return;
+
+    // Fetch latest skin quiz responses
+    QuerySnapshot<Map<String, dynamic>> quizSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user!.uid)
+        .collection('skinquiz_responses')
+        .orderBy('createdAt', descending: true)
+        .limit(1)
+        .get();
+
+    QuerySnapshot<Map<String, dynamic>> detectedIssuesSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user!.uid)
+        .collection('image_responses')
+        .orderBy('createdAt', descending: true)
+        .get();
+
+    print("fetched");
+
+    if (quizSnapshot.docs.isNotEmpty) {
+      var latestQuizDoc = quizSnapshot.docs.first;
+      var quizData = latestQuizDoc.data();
+
+
+      skinType = quizData['responses']?[0] ?? 'N/A';
+      skinQuizResponses = {
+        'createdAt': quizData['createdAt'].toDate().toString(),  // Convert Firestore Timestamp
+        'skinType': quizData['responses']?[0] ?? 'N/A',
+        'sunscreenUsage': quizData['responses']?[1] ?? 'N/A',
+        'skinAllergies': quizData['responses']?[2] ?? 'N/A',
+        'exfoliationFrequency': quizData['responses']?[3] ?? 'N/A',
+      };
+
+      Map<String, Map<String, dynamic>> latestImagesBySkinType = {}; // To store latest entry per skinType
+      Set<String> detectedIssuesSet = {}; // To store unique detected issues
+
+      for (var doc in detectedIssuesSnapshot.docs) {
+        Map<String, dynamic> data = doc.data();
+        String skinType = (data["skinType"] ?? "Unknown").toString();
+
+        // Store the first occurrence of each skinType
+        if (!latestImagesBySkinType.containsKey(skinType)) {
+          latestImagesBySkinType[skinType] = data;
+
+          // Extract detected issues from this entry
+          if (data.containsKey("detected_issues")) {
+            List<dynamic> issues = data["detected_issues"];
+
+            for (var issue in issues) {
+              if (issue is Map<String, dynamic> && issue.containsKey("label")) {
+                String issueName = issue["label"].split(" (")[0]; // Extract issue name
+                detectedIssuesSet.add(issueName); // Add to set (ensures uniqueness)
+              }
+            }
+          }
+        }
+      }
+
+      print("Unique detected issues: $detectedIssuesSet");
+
+    }
+    else {
+      print("no record found");}
+
+
+    // Send request for recommendations
+    _sendRecommendationRequest();
   }
 
   Future<void> _fetchLatestImageResponse(String userID) async {
@@ -134,6 +221,67 @@ class _ForYouPageState extends State<ForYouPage> {
     }
   }
 
+  Future<void> _sendRecommendationRequest() async {
+    const String serverUrl = "http://192.168.243.137:5000/recommend";
+
+    if (skinQuizResponses == null) {
+      print("❌ No skin quiz responses found.");
+      return;
+    }
+
+    try {
+      final client = http.Client(); // Create an HTTP client
+      final request = http.Request("POST", Uri.parse(serverUrl));
+
+      // Add headers
+      request.headers["Content-Type"] = "application/json";
+
+      // Attach body
+      request.body = jsonEncode({
+        "detectedIssues": detectedIssues,
+        "skinType": skinType,
+        "skinQuizResponses": skinQuizResponses,
+      });
+
+      // Send request and await response
+      final streamedResponse = await client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        print("✅ Raw Recommendation Response: ${response.body}");
+
+        final Map<String, dynamic> decodedResponse = jsonDecode(response.body);
+
+        // Validate response structure
+        if (decodedResponse.containsKey("recommendedProducts") &&
+            decodedResponse["recommendedProducts"] != null) {
+          final rawProducts = decodedResponse["recommendedProducts"];
+
+          if (rawProducts is Map<String, dynamic>) {
+            setState(() {
+              recommendedProducts = rawProducts.entries
+                  .map((entry) {
+                // Convert category key-value pairs into a standard format
+                Map<String, dynamic> product = entry.value;
+                product["Category"] = entry.key; // Add category name to product data
+                return product;
+              })
+                  .toList();
+            });
+          }
+          print("✅ Processed Recommended Products: $recommendedProducts");}
+
+
+        else {
+          print("❌ Unexpected response structure: ${decodedResponse}");
+        }
+      } else {
+        print("❌ Failed to get recommendations: ${response.statusCode} - ${response.body}");
+      }
+    } catch (e) {
+      print("❌ Error sending request: $e");
+    }
+  }
 
   @override
   void initState() {
@@ -141,6 +289,7 @@ class _ForYouPageState extends State<ForYouPage> {
     _getUserData().then((_) {
       _fetchLatestImageResponse(user!.uid);
       fetchLatestQuizResponse(user!.uid);
+      _fetchLatestImagesAndQuiz();
     });
   }
 
@@ -160,22 +309,47 @@ class _ForYouPageState extends State<ForYouPage> {
     List<String> allFaceTypes = ["front","left","right"];
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (latestQuizResponse != null) ...[
-          Text("Latest Skin Quiz Response",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.pinkAccent)),
-          const SizedBox(height: 5),
-          Text("Skin Type: ${latestQuizResponse!['skinType']}", style: TextStyle(fontSize: 16, color: Colors.black87)),
-          Text("Sunscreen Usage: ${latestQuizResponse!['sunscreenUsage']}", style: TextStyle(fontSize: 16, color: Colors.black87)),
-          Text("Skin Allergies: ${latestQuizResponse!['skinAllergies']}", style: TextStyle(fontSize: 16, color: Colors.black87)),
-          Text("Exfoliation Frequency: ${latestQuizResponse!['exfoliationFrequency']}", style: TextStyle(fontSize: 16, color: Colors.black87)),
+          const Text(
+            "Latest Skin Quiz Response",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.pinkAccent,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            color: Colors.pink[40],
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  _quizDetailTile(Icons.face, "Skin Type", latestQuizResponse!['skinType']),
+                  const Divider(),
+                  _quizDetailTile(Icons.wb_sunny_rounded, "Sunscreen Usage", latestQuizResponse!['sunscreenUsage']),
+                  const Divider(),
+                  _quizDetailTile(Icons.healing, "Skin Allergies", latestQuizResponse!['skinAllergies']),
+                  const Divider(),
+                  _quizDetailTile(Icons.spa, "Exfoliation Frequency", latestQuizResponse!['exfoliationFrequency']),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 20),
         ],
 
+
         Text("Latest Analyzed Images",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.pinkAccent)),
-        const SizedBox(height: 5),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.pinkAccent)),
+        const SizedBox(height: 10),
 
         ListView.builder(
           shrinkWrap: true,
@@ -198,6 +372,7 @@ class _ForYouPageState extends State<ForYouPage> {
               elevation: 3,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
               margin: const EdgeInsets.only(bottom: 10),
+              color: Colors.pink[40],
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Column(
@@ -239,51 +414,99 @@ class _ForYouPageState extends State<ForYouPage> {
                         ),
                       ),
                     ),
-                    /*const SizedBox(height: 10),
-
-                    Text("Original $faceType Face",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
-                    const SizedBox(height: 8),
-
-                    // Original Image or Warning Box
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: hasOriginalImage
-                          ? Image.network(
-                        image['uploadedImageUrl']!,
-                        height: 140,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                        const Icon(Icons.warning, size: 50, color: Colors.red),
-                      )
-                          : Container(
-                        height: 140,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.warning, size: 50, color: Colors.red),
-                              SizedBox(height: 10),
-                              Text("No Original Image Available",
-                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),*/
                   ],
                 ),
               ),
             );
+
+
           },
         ),
+        const SizedBox(height: 20),
+
+        const Text("Recommended Products", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.pinkAccent)),
+        // ✅ Null check added to prevent crash
+        const SizedBox(height: 10),
+        recommendedProducts.isEmpty
+            ? Text("No recommendations yet.")
+            : SizedBox(
+          height: 980,
+          child : ListView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            itemCount: recommendedProducts.length,
+            itemBuilder: (context, index) {
+              final product = recommendedProducts[index];
+              final imagePath = index < imageAssets.length
+                  ? imageAssets[index]
+                  : 'assets/product1.png'; // fallback if more than 6
+              return Card(
+                margin: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                elevation: 4,
+                color: Colors.pink[40],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    children: [
+                      // Product Image
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child :
+                        Image.asset(
+                          imagePath,
+                          height: 80,
+                          width: 80,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      SizedBox(width: 16),
+                      // Product Details
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              product['Name'] ?? 'Unknown Product',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              product['Brand'] ?? 'Unknown Brand',
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              product['Category'] ?? 'N/A',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              "\$${product['Price'] ?? 'N/A'}",
+                              style: TextStyle(
+                                color: Colors.green[700],
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        )
       ],
     );
   }
@@ -333,36 +556,6 @@ class _ForYouPageState extends State<ForYouPage> {
             children: [
               latestDataCard(),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  // Call API to generate recommendations OR navigate to recommendation page
-                  Navigator.pushNamed(context, '/recommendations');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.pinkAccent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
-                  padding: EdgeInsets.symmetric(vertical: 14.6, horizontal: 20),
-                ),
-                child: Text("Recommend Me", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(height: 20),
-
-              const Text("Recommended Products",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.pinkAccent)),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 140,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    productCard("Hydrating Serum", "assets/1.png"),
-                    productCard("Vitamin C Cream", "assets/2.png"),
-                    productCard("Sunscreen SPF 50", "assets/3.png"),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
 
               const Text("Skincare Routine",
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.pinkAccent)),
@@ -372,11 +565,10 @@ class _ForYouPageState extends State<ForYouPage> {
               routineStep("3. Use a serum (Vitamin C in the morning, Retinol at night)."),
               routineStep("4. Moisturize your skin to keep it hydrated."),
               routineStep("5. Apply sunscreen (SPF 30+ during the day)."),
-            ],
-          ),
+          ]
+          )
         ),
       ),
-
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 5.0,
@@ -502,4 +694,25 @@ class _ForYouPageState extends State<ForYouPage> {
       ),
     );
   }
+}
+
+
+Widget _quizDetailTile(IconData icon, String title, String value) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icon, color: Colors.pinkAccent, size: 26),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text(value, style: const TextStyle(fontSize: 15, color: Colors.black87)),
+          ],
+        ),
+      ),
+    ],
+  );
 }

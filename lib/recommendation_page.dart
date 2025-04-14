@@ -23,6 +23,16 @@ class _RecommendationPageState extends State<RecommendationPage> {
   String? skinType;
   String? product;
 
+  final imageAssets = [
+    'assets/1.png',
+    'assets/2.png',
+    'assets/3.png',
+    'assets/4.png',
+    'assets/5.png',
+    'assets/1.png',
+  ];
+
+
   @override
   void initState() {
     super.initState();
@@ -132,7 +142,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
   }
 
   Future<void> _sendRecommendationRequest() async {
-    const String serverUrl = "http://192.168.202.137:5000/recommend";
+    const String serverUrl = "http://192.168.243.137:5000/recommend";
 
     if (skinQuizResponses == null) {
       print("❌ No skin quiz responses found.");
@@ -181,6 +191,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
           }
           print("✅ Processed Recommended Products: $recommendedProducts");}
 
+
     else {
           print("❌ Unexpected response structure: ${decodedResponse}");
         }
@@ -226,12 +237,12 @@ class _RecommendationPageState extends State<RecommendationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Detected Issues:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            /*Text("Detected Issues:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Wrap(
               children: detectedIssues.map((issue) => Chip(label: Text(issue))).toList(),
-            ),
+            ),*/
             SizedBox(height: 20),
-            Text("Recommended Products:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text("Recommended Products:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.pinkAccent)),
 
             // ✅ Null check added to prevent crash
             recommendedProducts.isEmpty
@@ -240,16 +251,78 @@ class _RecommendationPageState extends State<RecommendationPage> {
                   child: recommendedProducts.isEmpty
                       ? Center(child: Text("No recommendations yet."))
                       : ListView.builder(
-                          itemCount: recommendedProducts.length,
-                          itemBuilder: (context, index) {
-                            final product = recommendedProducts[index];
-                            return ListTile(
-                              title: Text(product['Name'] ?? 'Unknown Product'),
-                              subtitle: Text("${product['Brand'] ?? 'Unknown Brand'} - ${product['Category'] ?? 'N/A'} - \$${product['Price'] ?? 'N/A'}"),
-                            );
-                },
-              ),
-            ),
+                        itemCount: recommendedProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = recommendedProducts[index];
+                      final imagePath = index < imageAssets.length
+                          ? imageAssets[index]
+                          : 'assets/product1.png'; // fallback if more than 6
+                      return Card(
+                          margin: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Row(
+                              children: [
+                              // Product Image
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child :
+                                  Image.asset(
+                                    imagePath,
+                                    height: 80,
+                                    width: 80,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              SizedBox(width: 16),
+                              // Product Details
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      product['Name'] ?? 'Unknown Product',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      product['Brand'] ?? 'Unknown Brand',
+                                      style: TextStyle(
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      product['Category'] ?? 'N/A',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      "\$${product['Price'] ?? 'N/A'}",
+                                      style: TextStyle(
+                                        color: Colors.green[700],
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+            )
           ],
         ),
       ),
