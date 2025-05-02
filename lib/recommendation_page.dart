@@ -142,7 +142,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
   }
 
   Future<void> _sendRecommendationRequest() async {
-    const String serverUrl = "http://192.168.243.137:5000/recommend";
+    const String serverUrl = "http://192.168.31.183:5000/recommend";
 
     if (skinQuizResponses == null) {
       print("❌ No skin quiz responses found.");

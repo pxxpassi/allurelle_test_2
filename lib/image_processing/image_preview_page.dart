@@ -116,7 +116,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
 
   Future<String> getFlaskUrl() async {
     String ipAddress = await getIpAddress();
-    return 'http://192.168.118.137:5000/analyze';
+    return 'http://192.168.31.183:5000/analyze';
   }
 
   Future<void> _sendToFlaskAPI(BuildContext context, String imageUrl) async {
@@ -125,7 +125,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
       if (response.statusCode != 200) throw Exception("Failed to download image");
 
       Uint8List imageBytes = response.bodyBytes;
-      var request = http.MultipartRequest("POST", Uri.parse('http://192.168.243.137:5000/analyze'))
+      var request = http.MultipartRequest("POST", Uri.parse('http://192.168.31.183:5000/analyze'))
         ..files.add(http.MultipartFile.fromBytes('image', imageBytes, filename: "uploaded.jpg", contentType: MediaType("image", "jpeg")));
 
       var streamedResponse = await request.send();

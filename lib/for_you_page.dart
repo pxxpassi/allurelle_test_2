@@ -221,8 +221,12 @@ class _ForYouPageState extends State<ForYouPage> {
     }
   }
 
+  static const String serverIp = "192.168.31.183"; // <-- easily changeable IP
+  static const int serverPort = 5000;
+  static const String serverPath = "/recommend";
+
   Future<void> _sendRecommendationRequest() async {
-    const String serverUrl = "http://192.168.243.137:5000/recommend";
+    final String serverUrl = "http://192.168.31.183:5000/recommend";
 
     if (skinQuizResponses == null) {
       print("❌ No skin quiz responses found.");
@@ -245,7 +249,7 @@ class _ForYouPageState extends State<ForYouPage> {
 
       // Send request and await response
       final streamedResponse = await client.send(request);
-      final response = await http.Response.fromStream(streamedResponse);
+      final response = await http.Response.fromStream(streamedResponse).timeout(Duration(seconds: 30));;
 
       if (response.statusCode == 200) {
         print("✅ Raw Recommendation Response: ${response.body}");
@@ -430,7 +434,7 @@ class _ForYouPageState extends State<ForYouPage> {
         recommendedProducts.isEmpty
             ? Text("No recommendations yet.")
             : SizedBox(
-          height: 980,
+          height: 990,
           child : ListView.builder(
             shrinkWrap: true,
             physics: NeverScrollableScrollPhysics(),
@@ -506,7 +510,7 @@ class _ForYouPageState extends State<ForYouPage> {
               );
             },
           ),
-        )
+        ),
       ],
     );
   }
